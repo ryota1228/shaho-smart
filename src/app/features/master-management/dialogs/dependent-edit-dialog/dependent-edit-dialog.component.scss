@@ -1,0 +1,31 @@
+.dependent-dialog-title {
+  font-weight: bold;
+}
+.dependent-subtitle {
+  margin-top: 1rem;
+  font-weight: 500;
+}
+.dependent-list {
+  max-height: 200px;
+  overflow: auto;
+  margin-bottom: 1rem;
+}
+.no-data-msg {
+  color: #666;
+  font-size: 0.9rem;
+}
+.dependent-divider {
+  margin: 2rem 0 1rem;
+}
+.dependent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.form-field {
+  width: 100%;
+}
+.form-actions {
+  margin-top: 1rem;
+  text-align: right;
+}

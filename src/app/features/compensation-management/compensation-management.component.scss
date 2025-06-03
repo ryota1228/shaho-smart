@@ -1,0 +1,36 @@
+.compensation-card {
+  margin: 1rem 0;
+}
+
+.compensation-title {
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.compensation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-field {
+  width: 100%;
+}
+
+.allowances-section {
+  border-top: 1px solid #ccc;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.summary-preview {
+  padding: 0.5rem;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-weight: 600;
+}
+
+.btn.submit-compensation {
+  align-self: flex-start;
+}

@@ -1,0 +1,54 @@
+<h3 class="dependent-subtitle">登録済み扶養者</h3>
+<mat-list *ngIf="dependents.length > 0" class="dependent-list">
+  <mat-list-item *ngFor="let dep of dependents; let i = index" (click)="editDependent(i)">
+    <mat-icon matListIcon>person</mat-icon>
+    <h4 matLine>{{ dep.name }}（{{ dep.relation }}）</h4>
+    <p matLine>{{ dep.birthday | date }}・{{ dep.livesTogether ? '同居' : '別居' }}・{{ dep.income }}万円</p>
+  </mat-list-item>
+</mat-list>
+<p *ngIf="dependents.length === 0" class="no-data-msg">現在、扶養者は登録されていません。</p>
+
+<mat-divider class="dependent-divider">扶養者の追加</mat-divider>
+
+<mat-accordion>
+  <mat-expansion-panel>
+    <mat-expansion-panel-header>
+      <mat-panel-title>新しい扶養者を追加</mat-panel-title>
+    </mat-expansion-panel-header>
+
+    <form class="dependent-form" aria-label="新規扶養者入力フォーム">
+      <mat-form-field appearance="outline" class="form-field">
+        <mat-label>氏名</mat-label>
+        <input matInput [(ngModel)]="newDependent.name" name="name">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="form-field">
+        <mat-label>続柄</mat-label>
+        <mat-select [(ngModel)]="newDependent.relation" name="relation">
+          <mat-option value="配偶者">配偶者</mat-option>
+          <mat-option value="子">子</mat-option>
+          <mat-option value="親">親</mat-option>
+          <mat-option value="その他">その他</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="form-field">
+        <mat-label>生年月日</mat-label>
+        <input matInput type="date" [(ngModel)]="newDependent.birthday" name="birthday">
+      </mat-form-field>
+
+      <mat-checkbox [(ngModel)]="newDependent.livesTogether" name="livesTogether">
+        同居している
+      </mat-checkbox>
+
+      <mat-form-field appearance="outline" class="form-field">
+        <mat-label>年間収入（万円）</mat-label>
+        <input matInput type="number" [(ngModel)]="newDependent.income" name="income">
+      </mat-form-field>
+
+      <div class="form-actions">
+        <button mat-flat-button color="primary" (click)="addDependent()">追加</button>
+      </div>
+    </form>
+  </mat-expansion-panel>
+</mat-accordion>

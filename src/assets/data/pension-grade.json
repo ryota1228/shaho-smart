@@ -1,0 +1,194 @@
+[
+  {
+    "grade": 1,
+    "lower": 83000,
+    "upper": 93000,
+    "monthly": 93000
+  },
+  {
+    "grade": 2,
+    "lower": 93000,
+    "upper": 101000,
+    "monthly": 98000
+  },
+  {
+    "grade": 3,
+    "lower": 101000,
+    "upper": 107000,
+    "monthly": 104000
+  },
+  {
+    "grade": 4,
+    "lower": 107000,
+    "upper": 114000,
+    "monthly": 110000
+  },
+  {
+    "grade": 5,
+    "lower": 114000,
+    "upper": 122000,
+    "monthly": 118000
+  },
+  {
+    "grade": 6,
+    "lower": 122000,
+    "upper": 130000,
+    "monthly": 126000
+  },
+  {
+    "grade": 7,
+    "lower": 130000,
+    "upper": 138000,
+    "monthly": 134000
+  },
+  {
+    "grade": 8,
+    "lower": 138000,
+    "upper": 146000,
+    "monthly": 142000
+  },
+  {
+    "grade": 9,
+    "lower": 146000,
+    "upper": 155000,
+    "monthly": 150000
+  },
+  {
+    "grade": 10,
+    "lower": 155000,
+    "upper": 165000,
+    "monthly": 160000
+  },
+  {
+    "grade": 11,
+    "lower": 165000,
+    "upper": 175000,
+    "monthly": 170000
+  },
+  {
+    "grade": 12,
+    "lower": 175000,
+    "upper": 185000,
+    "monthly": 180000
+  },
+  {
+    "grade": 13,
+    "lower": 185000,
+    "upper": 210000,
+    "monthly": 200000
+  },
+  {
+    "grade": 14,
+    "lower": 195000,
+    "upper": 210000,
+    "monthly": 200000
+  },
+  {
+    "grade": 15,
+    "lower": 210000,
+    "upper": 230000,
+    "monthly": 220000
+  },
+  {
+    "grade": 16,
+    "lower": 230000,
+    "upper": 250000,
+    "monthly": 240000
+  },
+  {
+    "grade": 17,
+    "lower": 250000,
+    "upper": 270000,
+    "monthly": 260000
+  },
+  {
+    "grade": 18,
+    "lower": 270000,
+    "upper": 290000,
+    "monthly": 280000
+  },
+  {
+    "grade": 19,
+    "lower": 290000,
+    "upper": 310000,
+    "monthly": 300000
+  },
+  {
+    "grade": 20,
+    "lower": 310000,
+    "upper": 330000,
+    "monthly": 320000
+  },
+  {
+    "grade": 21,
+    "lower": 330000,
+    "upper": 350000,
+    "monthly": 340000
+  },
+  {
+    "grade": 22,
+    "lower": 350000,
+    "upper": 370000,
+    "monthly": 360000
+  },
+  {
+    "grade": 23,
+    "lower": 370000,
+    "upper": 395000,
+    "monthly": 380000
+  },
+  {
+    "grade": 24,
+    "lower": 395000,
+    "upper": 425000,
+    "monthly": 410000
+  },
+  {
+    "grade": 25,
+    "lower": 425000,
+    "upper": 455000,
+    "monthly": 440000
+  },
+  {
+    "grade": 26,
+    "lower": 455000,
+    "upper": 485000,
+    "monthly": 470000
+  },
+  {
+    "grade": 27,
+    "lower": 485000,
+    "upper": 515000,
+    "monthly": 500000
+  },
+  {
+    "grade": 28,
+    "lower": 515000,
+    "upper": 545000,
+    "monthly": 530000
+  },
+  {
+    "grade": 29,
+    "lower": 545000,
+    "upper": 575000,
+    "monthly": 560000
+  },
+  {
+    "grade": 30,
+    "lower": 575000,
+    "upper": 605000,
+    "monthly": 590000
+  },
+  {
+    "grade": 31,
+    "lower": 605000,
+    "upper": 635000,
+    "monthly": 620000
+  },
+  {
+    "grade": 32,
+    "lower": 635000,
+    "upper": "Infinity",
+    "monthly": 650000
+  }
+]

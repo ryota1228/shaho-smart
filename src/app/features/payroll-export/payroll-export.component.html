@@ -1,0 +1,47 @@
+<mat-card class="payroll-export-section">
+    <mat-card-title class="payroll-export-title">給与連携・帳票出力</mat-card-title>
+    <mat-card-content class="payroll-export-content">
+  
+      <form class="payroll-export-form">
+        <mat-form-field appearance="fill" class="form-field layout-name">
+          <mat-label>レイアウト名</mat-label>
+          <input matInput placeholder="例：月次保険料連携CSV">
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-field format-type">
+          <mat-label>出力形式</mat-label>
+          <mat-select>
+            <mat-option value="csv">CSV</mat-option>
+            <mat-option value="pdf">PDF</mat-option>
+          </mat-select>
+        </mat-form-field>
+  
+        <button mat-raised-button color="primary" class="btn export-layout">出力</button>
+      </form>
+  
+      <h3 class="payroll-export-subtitle">出力履歴</h3>
+      <table mat-table [dataSource]="[]" class="payroll-export-table mat-elevation-z1">
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef class="header date">出力日</th>
+          <td mat-cell *matCellDef="let row" class="cell date">-</td>
+        </ng-container>
+  
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef class="header type">形式</th>
+          <td mat-cell *matCellDef="let row" class="cell type">-</td>
+        </ng-container>
+  
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="header actions">操作</th>
+          <td mat-cell *matCellDef="let row" class="cell actions">
+            <button mat-button class="btn download">ダウンロード</button>
+          </td>
+        </ng-container>
+  
+        <tr mat-header-row *matHeaderRowDef="['date', 'type', 'actions']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['date', 'type', 'actions'];"></tr>
+      </table>
+  
+    </mat-card-content>
+  </mat-card>
+  

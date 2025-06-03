@@ -1,0 +1,195 @@
+// ---------------------------
+// 企業一覧カードヘッダー
+// ---------------------------
+.company-header {
+  display: flex;
+  align-items: center;
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+
+  .add-company-button {
+    margin-left: auto;
+  }
+}
+
+.add-company-button {
+  margin-left: auto;
+}
+
+// ---------------------------
+// 企業情報フォーム
+// ---------------------------
+.company-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-section {
+  border-top: 1px solid #ccc;
+  padding-top: 16px;
+}
+
+.section-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #444;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  .form-field {
+    flex: 1;
+  }
+
+  .short {
+    max-width: 240px;
+  }
+
+  .full {
+    flex: 1 1 100%;
+  }
+}
+
+.form-actions-fixed {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+
+  .form-field {
+    width: 240px;
+  }
+}
+
+input.invalid {
+  border: 1px solid red;
+}
+
+// ---------------------------
+// 組合健保の保険料率入力
+// ---------------------------
+.custom-rate-wrapper {
+  min-height: 60px;
+  padding-top: 8px;
+
+  &.hidden {
+    visibility: hidden;
+    height: 60px;
+  }
+
+  .rate-button {
+    margin-bottom: 4px;
+  }
+
+  .chip-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+}
+
+.checkbox-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+// ---------------------------
+// 従業員一覧・検索
+// ---------------------------
+.employee-header-actions {
+  margin-left: auto;
+}
+
+.employee-search-container {
+  margin: 12px 0 0 16px;
+}
+
+.employee-search-field {
+  width: 280px;
+}
+
+// ---------------------------
+// 従業員テーブルスタイル
+// ---------------------------
+.employee-table {
+  width: 100%;
+  min-width: 1080px;
+  overflow-x: auto;
+
+  th.mat-header-cell,
+  td.mat-cell {
+    padding: 8px 12px;
+    white-space: nowrap;
+    text-align: center;
+
+    &.numeric-cell {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  // 列幅設定（各ペアを近接表示）
+  .col-name             { min-width: 120px; text-align: center; }
+  .col-empno            { min-width: 90px; font-family: monospace; text-align: center; }
+  .col-dept             { min-width: 100px; text-align: center; }
+  .col-monthly          { min-width: 120px; text-align: center; }
+
+  .col-health,
+  .col-health-grade     { min-width: 110px; text-align: center; }
+  .col-pension,
+  .col-pension-grade    { min-width: 110px; text-align: center; }
+  .col-care,
+  .col-care-grade       { min-width: 110px; text-align: center; }
+
+  .col-actions          { min-width: 80px; text-align: center; }
+
+  mat-chip {
+    display: inline-block;
+    font-size: 13px;
+    padding: 0 10px;
+    white-space: nowrap;
+  }
+
+  // 行ホバー
+  tr.mat-row:hover {
+    background-color: #f9f9f9;
+  }
+
+  // グループ区切り（左右罫線）
+  .health-group-start,
+  .pension-group-start,
+  .care-group-start {
+    border-left: 2px solid #ccc;
+    padding-left: 8px;
+  }
+
+  .health-group-end,
+  .pension-group-end,
+  .care-group-end {
+    border-right: 2px solid #ccc;
+    padding-right: 8px;
+  }
+}
+
+// ---------------------------
+// チップ表示調整
+// ---------------------------
+mat-chip {
+  margin-right: 4px;
+  font-size: 13px;
+}
+
+// ---------------------------
+// テーブルラップ横スクロール
+// ---------------------------
+mat-card-content {
+  overflow-x: auto;
+}

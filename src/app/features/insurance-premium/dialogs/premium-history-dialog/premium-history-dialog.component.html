@@ -1,0 +1,54 @@
+<h2 mat-dialog-title>履歴</h2>
+
+<mat-dialog-content>
+  <table mat-table [dataSource]="premiumRecords" class="mat-elevation-z1 full-width-table">
+
+    <ng-container matColumnDef="month">
+      <th mat-header-cell *matHeaderCellDef>対象月</th>
+      <td mat-cell *matCellDef="let row">{{ row.applicableMonth }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="health">
+      <th mat-header-cell *matHeaderCellDef>健康保険</th>
+      <td mat-cell *matCellDef="let row">
+        <div>
+          {{ row.health?.total !== undefined ? (row.health.total | number) + ' 円' : '－' }}
+        </div>
+        <div *ngIf="row.health">
+          <small>本人：{{ row.health.employee | number }} 円 / 会社：{{ row.health.company | number }} 円</small>
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="pension">
+      <th mat-header-cell *matHeaderCellDef>厚生年金</th>
+      <td mat-cell *matCellDef="let row">
+        <div>
+          {{ row.pension?.total !== undefined ? (row.pension.total | number) + ' 円' : '－' }}
+        </div>
+        <div *ngIf="row.pension">
+          <small>本人：{{ row.pension.employee | number }} 円 / 会社：{{ row.pension.company | number }} 円</small>
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="care">
+      <th mat-header-cell *matHeaderCellDef>介護保険</th>
+      <td mat-cell *matCellDef="let row">
+        <div>
+          {{ row.care?.total !== undefined ? (row.care.total | number) + ' 円' : '－' }}
+        </div>
+        <div *ngIf="row.care">
+          <small>本人：{{ row.care.employee | number }} 円 / 会社：{{ row.care.company | number }} 円</small>
+        </div>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>閉じる</button>
+</mat-dialog-actions>

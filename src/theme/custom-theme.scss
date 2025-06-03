@@ -1,0 +1,20 @@
+@use '@angular/material' as mat;
+
+// 信頼性と視認性を重視したパレット設定
+$primary: mat.define-palette(mat.$blue-grey-palette, 700, 500, 900); // 主：堅実な信頼色
+$accent:  mat.define-palette(mat.$amber-palette, 600, 300, 900);     // 補助：警告や注目色
+$warn:    mat.define-palette(mat.$red-palette);                      // エラー：標準赤
+
+// テーマ構成定義（明色テーマ）
+$custom-theme: mat.define-light-theme((
+  color: (
+    primary: $primary,
+    accent: $accent,
+    warn: $warn,
+  ),
+  typography: mat.define-typography-config(), // フォント設定（今後調整可）
+  density: 0,                                  // 標準密度
+));
+
+// Angular Material 全コンポーネントに反映
+@include mat.all-component-themes($custom-theme);

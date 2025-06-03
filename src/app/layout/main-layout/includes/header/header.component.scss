@@ -1,0 +1,20 @@
+.main-header-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+  .main-header-menu-button {
+    margin-right: 1rem;
+  }
+  .main-header-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+  .main-header-spacer {
+    flex: 1 1 auto;
+  }
+  .main-header-user {
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+  

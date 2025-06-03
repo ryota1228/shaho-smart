@@ -1,0 +1,10 @@
+<h2 mat-dialog-title>削除の確認</h2>
+
+<mat-dialog-content class="confirm-dialog-content">
+  <p>{{ message }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button mat-dialog-close>No</button>
+  <button mat-flat-button color="warn" [mat-dialog-close]="true">Yes</button>
+</mat-dialog-actions>

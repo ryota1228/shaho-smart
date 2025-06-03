@@ -1,0 +1,106 @@
+<div [formGroup]="form" class="income-form-container">
+
+  <!-- 適用月 -->
+  <mat-form-field appearance="fill" class="form-field">
+    <mat-label><span class="required">*</span>適用月</mat-label>
+    <input matInput type="month" formControlName="applicableMonth" required>
+  </mat-form-field>
+
+  <!-- 基本給 -->
+  <h3 class="section-title">基本給</h3>
+
+  <mat-form-field appearance="fill" class="form-field">
+    <mat-label>給与形態</mat-label>
+    <mat-select formControlName="salaryType">
+      <mat-option value="monthly">月給</mat-option>
+      <mat-option value="daily">日給</mat-option>
+      <mat-option value="hourly">時給</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="fill" class="form-field">
+    <mat-label>基本額（円）</mat-label>
+    <input matInput type="number" formControlName="baseAmount">
+  </mat-form-field>
+
+  <mat-form-field *ngIf="form.value.salaryType === 'hourly'" appearance="fill" class="form-field">
+    <mat-label>月の労働時間合計（h）</mat-label>
+    <input matInput type="number" formControlName="totalWorkingHours">
+  </mat-form-field>  
+
+  <mat-form-field *ngIf="form.value.salaryType !== 'monthly'" appearance="fill" class="form-field">
+    <mat-label>勤務日数</mat-label>
+    <input matInput type="number" formControlName="workDays">
+  </mat-form-field>
+
+  <!-- 手当 -->
+  <div class="allowance-list" formArrayName="allowances">
+    <h3 class="section-title">手当</h3>
+    <div *ngFor="let allowance of allowances.controls; let i = index" [formGroupName]="i" class="item-block">
+      <div class="item-row">
+        <button mat-icon-button color="warn" (click)="removeAllowance(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+  
+        <mat-form-field class="form-field">
+          <mat-label>手当名</mat-label>
+          <input matInput formControlName="name">
+        </mat-form-field>
+  
+        <mat-form-field class="form-field">
+          <mat-label>金額</mat-label>
+          <input matInput type="number" formControlName="amount">
+        </mat-form-field>
+      </div>
+  
+      <div class="item-checkbox">
+        <mat-checkbox formControlName="includedInRemuneration" color="primary">
+          報酬に含めて算定する
+        </mat-checkbox>
+      </div>
+    </div>
+    <button mat-button (click)="addAllowance()">＋ 手当を追加</button>
+  </div>
+  
+  
+  <!-- 現物給与 -->
+  <div class="in-kind-income-list" formArrayName="inKindIncome">
+    <h3 class="section-title">現物給与</h3>
+    <div *ngFor="let item of inKindIncome.controls; let i = index" [formGroupName]="i" class="item-block">
+      <div class="item-row">
+        <button mat-icon-button color="warn" (click)="removeInKindIncome(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+  
+        <mat-form-field class="form-field">
+          <mat-label>項目名</mat-label>
+          <input matInput formControlName="name" placeholder="例：社宅・寮・社食など">
+        </mat-form-field>
+  
+        <mat-form-field class="form-field">
+          <mat-label>金額</mat-label>
+          <input matInput type="number" formControlName="amount" placeholder="金額">
+        </mat-form-field>
+      </div>
+  
+      <div class="item-checkbox">
+        <mat-checkbox formControlName="taxable" color="primary">
+          報酬に含めて算定する
+        </mat-checkbox>
+      </div>
+    </div>
+    <button mat-button (click)="addInKindIncome()">＋ 現物給与を追加</button>
+  </div>
+
+  <!-- サマリー -->
+  <div class="summary-box">
+    <p>月額報酬見込：{{ calculateTotalMonthlyIncome() | number }} 円</p>
+    <p>年間報酬見込（賞与除く）：{{ calculateEstimatedAnnualIncome() | number }} 円</p>
+  </div>
+
+  <!-- アクション -->
+  <div class="form-actions" style="text-align: right; margin-top: 1rem;">
+    <button mat-stroked-button (click)="cancel()">キャンセル</button>
+    <button mat-flat-button color="primary" (click)="save()">保存</button>
+  </div>
+</div>

@@ -1,0 +1,223 @@
+<div class="insurance-premium-wrapper">
+
+  <mat-card class="company-list">
+    <mat-card-title>企業一覧</mat-card-title>
+    <mat-card-content>
+      <table mat-table [dataSource]="companyList" class="mat-elevation-z1" style="width: 100%;">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>企業名</th>
+          <td mat-cell *matCellDef="let company">
+            <button mat-button (click)="selectCompany(company)">
+              {{ company.name }}
+            </button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="['name']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['name']"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card *ngIf="selectedCompanyId">
+    <mat-card-title>対象月を選択</mat-card-title>
+    <mat-card-content>
+      <div class="month-selection-row">
+        <mat-form-field appearance="outline">
+          <mat-label>対象月</mat-label>
+          <input matInput type="month" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthChange()">
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="exportMonthlyPremiums()"
+          [disabled]="!selectedMonth || displayEmployees.length === 0"
+        >
+          <mat-icon>download</mat-icon>
+          この月のCSVを出力
+        </button>
+        
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card *ngIf="selectedCompanyId && selectedMonth">
+    <mat-card-title>従業員一覧（月額報酬）</mat-card-title>
+    <mat-card-content>
+      <table mat-table [dataSource]="displayEmployees" class="mat-elevation-z1" style="width: 100%;">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>氏名</th>
+          <td mat-cell *matCellDef="let emp">{{ emp.lastName }} {{ emp.firstName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="grade">
+          <th mat-header-cell *matHeaderCellDef>標準報酬月額</th>
+          <td mat-cell *matCellDef="let emp">
+            <div *ngIf="emp.standardMonthlyAmount">
+              {{ emp.standardMonthlyAmount | number }} 円
+            </div>
+            <div *ngIf="!emp.standardMonthlyAmount">－</div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="health">
+          <th mat-header-cell *matHeaderCellDef>
+            健康保険料
+            <button mat-icon-button (click)="toggleColumnDetail('healthInsurance')">
+              <mat-icon>{{ healthInsuranceDetailOpenAll ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let emp">
+            <div>
+              {{ emp.healthInsuranceAmount !== null ? (emp.healthInsuranceAmount | number) + ' 円' : '－' }}
+            </div>
+            <div *ngIf="emp.healthInsuranceDetailOpen">
+              <small>本人：{{ emp.healthInsuranceEmployee | number }} 円 / 会社：{{ emp.healthInsuranceCompany | number }} 円</small>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="pension">
+          <th mat-header-cell *matHeaderCellDef>
+            厚生年金保険料
+            <button mat-icon-button (click)="toggleColumnDetail('pensionInsurance')">
+              <mat-icon>{{ pensionInsuranceDetailOpenAll ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let emp">
+            <div>
+              {{ emp.pensionInsuranceAmount !== null ? (emp.pensionInsuranceAmount | number) + ' 円' : '－' }}
+            </div>
+            <div *ngIf="emp.pensionInsuranceDetailOpen">
+              <small>本人：{{ emp.pensionInsuranceEmployee | number }} 円 / 会社：{{ emp.pensionInsuranceCompany | number }} 円</small>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="care">
+          <th mat-header-cell *matHeaderCellDef>
+            介護保険料
+            <button mat-icon-button (click)="toggleColumnDetail('careInsurance')">
+              <mat-icon>{{ careInsuranceDetailOpenAll ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let emp">
+            <div>
+              {{ emp.careInsuranceAmount !== null ? (emp.careInsuranceAmount | number) + ' 円' : '－' }}
+            </div>
+            <div *ngIf="emp.careInsuranceDetailOpen">
+              <small>本人：{{ emp.careInsuranceEmployee | number }} 円 / 会社：{{ emp.careInsuranceCompany | number }} 円</small>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>履歴</th>
+          <td mat-cell *matCellDef="let emp">
+            <button mat-icon-button (click)="openPremiumHistory(emp)">
+              <mat-icon>history</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="['name', 'grade', 'health', 'pension', 'care', 'actions']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['name', 'grade', 'health', 'pension', 'care', 'actions']"></tr>
+      </table>
+
+      <mat-card *ngIf="displayEmployees.length > 0" class="total-premium-summary" style="margin-top: 16px;">
+        <mat-card-content>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div><strong>健康保険料 合計:</strong> {{ getTotalPremiums().health | number }} 円</div>
+            <div><strong>厚生年金保険料 合計:</strong> {{ getTotalPremiums().pension | number }} 円</div>
+            <div><strong>介護保険料 合計:</strong> {{ getTotalPremiums().care | number }} 円</div>
+            <div><strong>総合計:</strong> {{ getTotalPremiums().total | number }} 円</div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card *ngIf="bonusEmployees.length > 0">
+        <mat-card-title>従業員一覧（賞与）</mat-card-title>
+        <mat-card-content>
+          <table mat-table [dataSource]="bonusEmployees" class="mat-elevation-z1" style="width: 100%;">
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>氏名</th>
+              <td mat-cell *matCellDef="let emp">{{ emp.lastName }} {{ emp.firstName }}</td>
+            </ng-container>
+      
+            <ng-container matColumnDef="bonusAmount">
+              <th mat-header-cell *matHeaderCellDef>標準賞与額</th>
+              <td mat-cell *matCellDef="let emp">{{ emp.bonusStandardAmount | number }} 円</td>
+            </ng-container>
+      
+            <ng-container matColumnDef="bonusHealth">
+              <th mat-header-cell *matHeaderCellDef>
+                健康保険料
+                <button mat-icon-button (click)="toggleBonusDetail('health')">
+                  <mat-icon>{{ bonusHealthDetailOpenAll ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </th>
+              <td mat-cell *matCellDef="let emp">
+                <div>
+                  {{ emp.bonusHealth !== null ? (emp.bonusHealth | number) + ' 円' : '－' }}
+                </div>
+                <div *ngIf="emp.bonusHealthDetailOpen">
+                  <small>本人：{{ emp.bonusHealthEmployee | number }} 円 / 会社：{{ emp.bonusHealthCompany | number }} 円</small>
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="bonusPension">
+              <th mat-header-cell *matHeaderCellDef>
+                厚生年金保険料
+                <button mat-icon-button (click)="toggleBonusDetail('pension')">
+                  <mat-icon>{{ bonusPensionDetailOpenAll ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </th>
+              <td mat-cell *matCellDef="let emp">
+                <div>
+                  {{ emp.bonusPension !== null ? (emp.bonusPension | number) + ' 円' : '－' }}
+                </div>
+                <div *ngIf="emp.bonusPensionDetailOpen">
+                  <small>本人：{{ emp.bonusPensionEmployee | number }} 円 / 会社：{{ emp.bonusPensionCompany | number }} 円</small>
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="bonusCare">
+              <th mat-header-cell *matHeaderCellDef>
+                介護保険料
+                <button mat-icon-button (click)="toggleBonusDetail('care')">
+                  <mat-icon>{{ bonusCareDetailOpenAll ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </th>
+              <td mat-cell *matCellDef="let emp">
+                <div>
+                  {{ emp.bonusCare !== null ? (emp.bonusCare | number) + ' 円' : '－' }}
+                </div>
+                <div *ngIf="emp.bonusCareDetailOpen">
+                  <small>本人：{{ emp.bonusCareEmployee | number }} 円 / 会社：{{ emp.bonusCareCompany | number }} 円</small>
+                </div>
+              </td>
+            </ng-container>
+      
+            <tr mat-header-row *matHeaderRowDef="['name', 'bonusAmount', 'bonusHealth', 'bonusPension', 'bonusCare']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['name', 'bonusAmount', 'bonusHealth', 'bonusPension', 'bonusCare']"></tr>
+          </table>
+
+          <mat-card *ngIf="bonusEmployees.length > 0" class="total-premium-summary" style="margin-top: 16px;">
+            <mat-card-content>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div><strong>健康保険料 合計:</strong> {{ getTotalBonusPremiums().health | number }} 円</div>
+                <div><strong>厚生年金保険料 合計:</strong> {{ getTotalBonusPremiums().pension | number }} 円</div>
+                <div><strong>介護保険料 合計:</strong> {{ getTotalBonusPremiums().care | number }} 円</div>
+                <div><strong>総合計:</strong> {{ getTotalBonusPremiums().total | number }} 円</div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+          
+        </mat-card-content>
+      </mat-card>
+      
+    </mat-card-content>
+  </mat-card>
+</div>

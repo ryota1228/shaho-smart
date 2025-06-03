@@ -1,0 +1,23 @@
+.full-width-table {
+    width: 100%;
+  
+    th, td {
+      padding: 8px 12px;
+      vertical-align: top;
+    }
+  
+    small {
+      color: #666;
+      font-size: 12px;
+    }
+  
+    th {
+      white-space: nowrap;
+    }
+  
+    td div:first-child {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+  }
+  

@@ -1,0 +1,53 @@
+<div class="income-record-list">
+  <table mat-table [dataSource]="incomeRecords" class="mat-elevation-z2">
+
+    <ng-container matColumnDef="month">
+      <th mat-header-cell *matHeaderCellDef>月</th>
+      <td mat-cell *matCellDef="let row">{{ row.applicableMonth }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="base">
+      <th mat-header-cell *matHeaderCellDef>基本給</th>
+      <td mat-cell *matCellDef="let row">{{ getBaseSalaryAmount(row) | number }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="allowanceTotal">
+      <th mat-header-cell *matHeaderCellDef>手当合計</th>
+      <td mat-cell *matCellDef="let row">{{ getAllowanceTotal(row) | number }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="inKind">
+      <th mat-header-cell *matHeaderCellDef>現物給与</th>
+      <td mat-cell *matCellDef="let row">{{ getInKindIncomeTotal(row) | number }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="bonus">
+      <th mat-header-cell *matHeaderCellDef>賞与</th>
+      <td mat-cell *matCellDef="let row">{{ row.bonus | number }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="total">
+      <th mat-header-cell *matHeaderCellDef>月額合計</th>
+      <td mat-cell *matCellDef="let row">{{ row.totalMonthlyIncome | number }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef>操作</th>
+      <td mat-cell *matCellDef="let row">
+        <button mat-icon-button color="primary" (click)="editRecord(row)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" (click)="deleteRecord(row.applicableMonth)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="['month', 'base', 'allowanceTotal', 'inKind', 'bonus', 'total', 'actions']"></tr>
+    <tr mat-row *matRowDef="let row; columns: ['month', 'base', 'allowanceTotal', 'inKind', 'bonus', 'total', 'actions'];"></tr>
+  </table>
+
+  <div class="add-button">
+    <button mat-flat-button color="primary" (click)="addRecord()">＋ 月を追加</button>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+<div class="bonus-summary-wrapper">
+  <div class="summary-metrics">
+    <p>年間支給回数：{{ bonusCount }} 回</p>
+    <p>年間合計額：{{ totalBonusAmount | number }} 円</p>
+  </div>
+
+  <div class="bonus-detail-list">
+    <div *ngFor="let detail of bonusRecords; let i = index" class="bonus-row">
+      <mat-form-field appearance="fill" class="form-field">
+        <mat-label>支給月</mat-label>
+        <input
+          matInput
+          type="month"
+          [(ngModel)]="detail.applicableMonth"
+          (ngModelChange)="saveRecord(detail)"
+          required
+        >
+      </mat-form-field>
+      
+      <mat-form-field appearance="fill" class="form-field">
+        <mat-label>金額</mat-label>
+        <input
+          matInput
+          type="number"
+          [(ngModel)]="detail.amount"
+          (ngModelChange)="saveRecord(detail)"
+          min="0"
+          required
+        >
+      </mat-form-field>      
+      <button mat-icon-button color="warn" (click)="deleteRecord(i)">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+
+    <button mat-button (click)="addBonusRecord()">＋ 支給月を追加</button>
+  </div>
+</div>

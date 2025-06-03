@@ -1,0 +1,30 @@
+<h2 mat-dialog-title>保険料率の設定（組合健保）</h2>
+
+<mat-dialog-content class="rates-dialog-content">
+  <form>
+    <h3>健康保険</h3>
+    <mat-form-field appearance="outline">
+      <mat-label>本人負担（%）</mat-label>
+      <input matInput type="number" [(ngModel)]="customRates.health.employee" name="healthEmployee">
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>会社負担（%）</mat-label>
+      <input matInput type="number" [(ngModel)]="customRates.health.employer" name="healthEmployer">
+    </mat-form-field>
+
+    <h3>介護保険</h3>
+    <mat-form-field appearance="outline">
+      <mat-label>本人負担（%）</mat-label>
+      <input matInput type="number" [(ngModel)]="customRates.care.employee" name="careEmployee">
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>会社負担（%）</mat-label>
+      <input matInput type="number" [(ngModel)]="customRates.care.employer" name="careEmployer">
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">キャンセル</button>
+  <button mat-flat-button color="primary" (click)="save()">保存</button>
+</mat-dialog-actions>

@@ -1,0 +1,171 @@
+<h2 mat-dialog-title>{{ isEdit ? '従業員情報を編集' : '新規従業員を追加' }}</h2>
+
+<mat-dialog-content class="employee-dialog-content">
+
+  <mat-tab-group>
+
+    <mat-tab label="基本情報">
+      <form class="employee-form" aria-label="従業員情報フォーム" #form="ngForm">
+
+        <mat-form-field class="form-field">
+          <mat-label>社員番号</mat-label>
+          <input
+            matInput
+            [(ngModel)]="employee.empNo"
+            name="empNo"
+            required
+            #empNoCtrl="ngModel"
+            [readonly]="isEdit"
+          >
+          <mat-error *ngIf="empNoCtrl.invalid && empNoCtrl.touched">
+            社員番号は必須です
+          </mat-error>
+        </mat-form-field>
+
+        <div class="form-row">
+          <mat-form-field class="form-field">
+            <mat-label>姓</mat-label>
+            <input matInput [(ngModel)]="employee.lastName" name="lastName" required #lastNameCtrl="ngModel">
+            <mat-error *ngIf="lastNameCtrl.invalid && lastNameCtrl.touched">姓は必須です</mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>名</mat-label>
+            <input matInput [(ngModel)]="employee.firstName" name="firstName" required #firstNameCtrl="ngModel">
+            <mat-error *ngIf="firstNameCtrl.invalid && firstNameCtrl.touched">名は必須です</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field class="form-field">
+            <mat-label>セイ</mat-label>
+            <input matInput [(ngModel)]="employee.lastNameKana" name="lastNameKana" required #lastNameKanaCtrl="ngModel">
+            <mat-error *ngIf="lastNameKanaCtrl.invalid && lastNameKanaCtrl.touched">姓（カナ）は必須です</mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="form-field">
+            <mat-label>メイ</mat-label>
+            <input matInput [(ngModel)]="employee.firstNameKana" name="firstNameKana" required #firstNameKanaCtrl="ngModel">
+            <mat-error *ngIf="firstNameKanaCtrl.invalid && firstNameKanaCtrl.touched">名（カナ）は必須です</mat-error>
+          </mat-form-field>
+        </div>
+
+        <mat-form-field class="form-field">
+          <mat-label>所属</mat-label>
+          <input matInput [(ngModel)]="employee.dept" name="dept">
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>雇用区分</mat-label>
+          <mat-select [(ngModel)]="employee.employmentType" name="employmentType" required #employmentTypeCtrl="ngModel">
+            <mat-option *ngFor="let type of employmentTypes" [value]="type">{{ type }}</mat-option>
+          </mat-select>
+          <mat-error *ngIf="employmentTypeCtrl.invalid && employmentTypeCtrl.touched">雇用区分は必須です</mat-error>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>週所定労働時間（h）</mat-label>
+          <input matInput type="number" [(ngModel)]="employee.weeklyHours" name="weeklyHours" required #weeklyHoursCtrl="ngModel">
+          <mat-error *ngIf="weeklyHoursCtrl.invalid && weeklyHoursCtrl.touched">週所定労働時間は必須です</mat-error>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>雇用期間の見込み</mat-label>
+          <mat-select [(ngModel)]="employee.expectedDuration" name="expectedDuration" required #expectedDurationCtrl="ngModel">
+            <mat-option value="within2Months">2か月以内</mat-option>
+            <mat-option value="over2Months">2か月超</mat-option>
+            <mat-option value="indefinite">期間の定めなし</mat-option>
+          </mat-select>
+          <mat-error *ngIf="expectedDurationCtrl.invalid && expectedDurationCtrl.touched">雇用期間の見込みは必須です</mat-error>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>入社日</mat-label>
+          <input matInput [matDatepicker]="joinPicker" [(ngModel)]="employee.joinDate" name="joinDate">
+          <mat-datepicker-toggle matSuffix [for]="joinPicker"></mat-datepicker-toggle>
+          <mat-datepicker #joinPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>退職予定日(未定の場合は空欄可)</mat-label>
+          <input matInput [matDatepicker]="leavePicker" [(ngModel)]="employee.leaveDate" name="leaveDate">
+          <mat-datepicker-toggle matSuffix [for]="leavePicker"></mat-datepicker-toggle>
+          <mat-datepicker #leavePicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>生年月日</mat-label>
+          <input matInput [matDatepicker]="dobPicker" [(ngModel)]="employee.birthday" name="birthday" required #birthdayCtrl="ngModel">
+          <mat-datepicker-toggle matSuffix [for]="dobPicker"></mat-datepicker-toggle>
+          <mat-datepicker #dobPicker></mat-datepicker>
+          <mat-error *ngIf="birthdayCtrl.invalid && birthdayCtrl.touched">生年月日は必須です</mat-error>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>性別</mat-label>
+          <mat-select [(ngModel)]="employee.gender" name="gender">
+            <mat-option value="male">男性</mat-option>
+            <mat-option value="female">女性</mat-option>
+            <mat-option value="other">その他</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>国籍</mat-label>
+          <input matInput [(ngModel)]="employee.nationality" name="nationality" placeholder="例：日本">
+        </mat-form-field>
+        
+        <mat-form-field class="form-field">
+          <mat-label>在留資格</mat-label>
+          <input matInput [(ngModel)]="employee.residencyStatus" name="residencyStatus" placeholder="例：技術・人文知識・国際業務">
+        </mat-form-field>        
+
+        <mat-form-field class="form-field">
+          <mat-label>学生区分</mat-label>
+          <mat-select [(ngModel)]="employee.studentStatus" name="studentStatus" required #studentStatusCtrl="ngModel">
+            <mat-option value="none">該当なし</mat-option>
+            <mat-option value="daytime">昼間部学生</mat-option>
+            <mat-option value="nighttime">夜間学生</mat-option>
+            <mat-option value="correspondence">通信課程</mat-option>
+          </mat-select>
+          <mat-error *ngIf="studentStatusCtrl.invalid && studentStatusCtrl.touched">学生区分は必須です</mat-error>
+        </mat-form-field>
+
+        <mat-form-field class="form-field">
+          <mat-label>備考</mat-label>
+          <textarea matInput rows="2" [(ngModel)]="employee.note" name="note"></textarea>
+        </mat-form-field>
+      </form>
+    </mat-tab>
+
+    <mat-tab label="報酬・手当">
+      <app-income-record-list
+      [companyId]="companyId"
+      [empNo]="employee.empNo"
+      [incomeRecords]="incomeRecords"
+      (incomeRecordsChange)="incomeRecords = $event">
+    </app-income-record-list>
+    </mat-tab>
+    
+    <mat-tab label="賞与">
+      <app-bonus-summary
+      [companyId]="companyId"
+      [empNo]="employee.empNo"></app-bonus-summary>
+    </mat-tab>
+
+    <mat-tab label="扶養者情報">
+      <app-dependent-edit-dialog
+      [companyId]="companyId"
+      [empNo]="employee.empNo"
+      [dependents]="dependents"
+      (dependentsChange)="dependents = $event">
+    </app-dependent-edit-dialog>
+    </mat-tab>
+
+  </mat-tab-group>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" aria-label="操作ボタン">
+  <button mat-stroked-button mat-dialog-close>キャンセル</button>
+  <button mat-flat-button color="primary" (click)="save(form)">保存</button>
+</mat-dialog-actions>

@@ -1,0 +1,272 @@
+<mat-card class="master-card company-list">
+  <mat-card-header class="company-header">
+    <mat-card-title class="company-header-title">企業一覧</mat-card-title>
+    <span class="spacer"></span>
+    <button mat-flat-button color="primary" class="add-company-button" (click)="addNewCompany()">
+      <mat-icon>add_business</mat-icon>
+      企業を追加
+    </button>
+  </mat-card-header>
+  <mat-card-content class="company-list-content">
+    <div *ngIf="companyList.length === 0" class="company-empty-message">企業がまだ登録されていません</div>
+    <table *ngIf="companyList.length > 0" mat-table [dataSource]="companyList" class="company-table mat-elevation-z1">
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef class="col-company-name">企業名</th>
+        <td mat-cell *matCellDef="let company" class="col-company-name">{{ company.name }}</td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="col-company-actions">操作</th>
+        <td mat-cell *matCellDef="let company" class="col-company-actions">
+          <button mat-icon-button (click)="selectCompany(company)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="confirmDeleteCompany(company)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="['name', 'actions']"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['name', 'actions'];" [class.selected-company]="row.companyId === selectedCompanyId"></tr>
+    </table>
+  </mat-card-content>
+</mat-card>
+
+<mat-divider class="section-divider"></mat-divider>
+
+<mat-card class="master-card company-info" *ngIf="companyInfo">
+  <mat-card-header class="company-info-header">
+    <mat-card-title class="company-info-title">企業基本情報</mat-card-title>
+  </mat-card-header>
+  <mat-card-content class="company-info-content">
+    <form class="company-form" aria-label="企業情報入力フォーム">
+
+      <div class="form-section contact-section">
+        <div class="section-title">企業連絡先</div>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>企業名</mat-label>
+            <input matInput [(ngModel)]="companyInfo.name" name="companyName" required>
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="form-field short">
+          <mat-label>郵便番号</mat-label>
+          <input matInput [(ngModel)]="companyInfo.postalCode" name="postalCode" (blur)="formatPostalCode()" placeholder="例：100-0001" maxlength="8">
+        </mat-form-field>
+        
+        <!-- 都道府県（必須） -->
+        <mat-form-field appearance="outline" class="form-field short">
+          <mat-label>都道府県</mat-label>
+          <mat-select [(ngModel)]="companyInfo.prefecture" name="prefecture" required>
+            <mat-option *ngFor="let pref of prefectures" [value]="pref">{{ pref }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <!-- 住所（都道府県以下） -->
+        <mat-form-field appearance="outline" class="form-field full">
+          <mat-label>市区町村・番地</mat-label>
+          <input matInput [(ngModel)]="companyInfo.address" name="addressDetail">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field short">
+          <mat-label>電話番号</mat-label>
+          <input matInput [(ngModel)]="companyInfo.phone" name="phone" inputmode="tel" placeholder="例：03-1234-5678" pattern="^0\\d{1,4}-\\d{1,4}-\\d{3,4}$" #telRef="ngModel" [class.invalid]="telRef.invalid && telRef.touched">
+          <mat-error *ngIf="telRef.invalid && telRef.touched">
+            電話番号の形式が正しくありません（例：03-1234-5678）
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="form-section insurance-section">
+        <div class="section-title">保険情報</div>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>健保種別</mat-label>
+            <mat-select [(ngModel)]="companyInfo.healthType" name="healthType">
+              <mat-option value="協会けんぽ">協会けんぽ</mat-option>
+              <mat-option value="組合健保">組合健保</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>保険者番号</mat-label>
+            <input matInput [(ngModel)]="companyInfo.insurerNumber" name="insurerNumber">
+          </mat-form-field>
+        </div>
+        <div class="custom-rate-wrapper" [class.hidden]="companyInfo.healthType !== '組合健保'">
+          <button mat-flat-button color="accent" (click)="openCustomRatesDialog()" class="rate-button">
+            <mat-icon>edit</mat-icon>
+            組合健保の保険料率を設定
+          </button>
+          <div *ngIf="companyInfo.customRates" class="chip-row">
+            <mat-chip color="primary" selected>
+              健保：{{ companyInfo.customRates.health?.employee }}% / {{ companyInfo.customRates.health?.employer }}%
+            </mat-chip>
+            <mat-chip color="primary" selected>
+              介護：{{ companyInfo.customRates.care?.employee }}% / {{ companyInfo.customRates.care?.employer }}%
+            </mat-chip>
+          </div>
+        </div>
+        <div class="checkbox-row">
+          <mat-checkbox [(ngModel)]="companyInfo.isApplicableToHealthInsurance" name="isApplicableToHealthInsurance">
+            健康保険の適用事業所である（任意含む）
+          </mat-checkbox>
+          <mat-checkbox [(ngModel)]="companyInfo.isApplicableToPension" name="isApplicableToPension">
+            厚生年金の適用事業所である（任意含む）
+          </mat-checkbox>
+        </div>
+      </div>
+
+      <div class="form-actions-fixed">
+        <mat-form-field appearance="outline" class="form-field short">
+          <mat-label>従業員数（自動計算）</mat-label>
+          <input matInput [value]="companyInfo.totalEmployeeCount ?? dataSource.length" readonly>
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="saveCompanyData()">
+          <mat-icon>save</mat-icon>
+          保存
+        </button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
+
+<mat-divider></mat-divider>
+
+<mat-card class="master-card employee-list" *ngIf="selectedCompanyId">
+  <mat-card-header>
+    <mat-card-title>従業員一覧</mat-card-title>
+    <div class="employee-header-actions">
+      <button mat-flat-button color="primary" (click)="openNewEmployeeDialog()">
+        <mat-icon>person_add</mat-icon>
+        従業員を追加
+      </button>
+    </div>
+    <mat-card-subtitle>
+      登録されている従業員情報の確認・編集ができます
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <div class="employee-search-container">
+    <mat-form-field appearance="outline" class="employee-search-field">
+      <mat-label>氏名または社員番号で検索</mat-label>
+      <input
+        matInput
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="applyFilter()"
+        placeholder="山田 / A001"
+      >
+    </mat-form-field>
+  </div>
+
+  <mat-card-content>
+    <table mat-table [dataSource]="dataSource" class="employee-table mat-elevation-z1">
+      <!-- 社員番号 -->
+      <ng-container matColumnDef="empNo">
+        <th mat-header-cell *matHeaderCellDef class="col-empno">社員番号</th>
+        <td mat-cell *matCellDef="let row" class="col-empno">{{ row.empNo }}</td>
+      </ng-container>
+
+      <!-- 氏名 -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef class="col-name">氏名</th>
+        <td mat-cell *matCellDef="let row" class="col-name">{{ row.lastName }} {{ row.firstName }}</td>
+      </ng-container>
+
+      <!-- 所属 -->
+      <ng-container matColumnDef="dept">
+        <th mat-header-cell *matHeaderCellDef class="col-dept">所属</th>
+        <td mat-cell *matCellDef="let row" class="col-dept">{{ row.dept || '-' }}</td>
+      </ng-container>
+
+      <!-- 標準報酬月額 -->
+      <ng-container matColumnDef="monthly">
+        <th mat-header-cell *matHeaderCellDef class="col-monthly">標準報酬月額（最新月）</th>
+        <td mat-cell *matCellDef="let row" class="col-monthly">
+          {{ row.standardMonthlyAmount != null ? (row.standardMonthlyAmount | number:'1.0-0') : '-' }}
+        </td>
+      </ng-container>
+
+      <!-- 健康保険 -->
+      <ng-container matColumnDef="health">
+        <th mat-header-cell *matHeaderCellDef class="col-health health-group-start">健康保険</th>
+        <td mat-cell *matCellDef="let row" class="col-health health-group-start">
+          <mat-chip
+            [color]="row.healthInsuranceStatus === '加入' ? 'primary' : 'warn'"
+            selected
+            [matTooltip]="row.healthInsuranceStatus !== '加入' ? row.healthInsuranceReason : ''"
+          >
+            {{ row.healthInsuranceStatus }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- 健保等級 -->
+      <ng-container matColumnDef="healthGrade">
+        <th mat-header-cell *matHeaderCellDef class="col-health-grade">健保等級（最新月）</th>
+        <td mat-cell *matCellDef="let row" class="col-health-grade">
+          {{ row.healthInsuranceStatus === '加入' ? (row.healthGrade ?? '-') : '-' }}
+        </td>
+      </ng-container>
+
+      <!-- 厚生年金 -->
+      <ng-container matColumnDef="pension">
+        <th mat-header-cell *matHeaderCellDef class="col-pension pension-group-start">厚生年金</th>
+        <td mat-cell *matCellDef="let row" class="col-pension pension-group-start">
+          <mat-chip
+            [color]="row.pensionStatus === '加入' ? 'primary' : 'warn'"
+            selected
+            [matTooltip]="row.pensionStatus !== '加入' ? row.pensionReason : ''"
+          >
+            {{ row.pensionStatus }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- 厚年等級 -->
+      <ng-container matColumnDef="pensionGrade">
+        <th mat-header-cell *matHeaderCellDef class="col-pension-grade">厚年等級（最新月）</th>
+        <td mat-cell *matCellDef="let row" class="col-pension-grade">
+          {{ row.pensionStatus === '加入' ? (row.pensionGrade ?? '-') : '-' }}
+        </td>
+      </ng-container>
+
+      <!-- 介護保険 -->
+      <ng-container matColumnDef="care">
+        <th mat-header-cell *matHeaderCellDef class="col-care care-group-start">介護保険</th>
+        <td mat-cell *matCellDef="let row" class="col-care care-group-start">
+          <mat-chip
+            [color]="row.careInsuranceStatus?.startsWith('加入') ? 'primary' : 'warn'"
+            selected
+            [matTooltip]="row.careInsuranceStatus?.startsWith('加入') ? '' : row.careInsuranceReason"
+          >
+            {{ row.careInsuranceStatus }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- 介護等級 -->
+      <ng-container matColumnDef="careGrade">
+        <th mat-header-cell *matHeaderCellDef class="col-care-grade">介護等級（最新月）</th>
+        <td mat-cell *matCellDef="let row" class="col-care-grade">
+          {{ row.careInsuranceStatus?.startsWith('加入') ? (row.careGrade ?? '-') : '-' }}
+        </td>
+      </ng-container>
+
+      <!-- 操作 -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="col-actions">操作</th>
+        <td mat-cell *matCellDef="let row" class="col-actions">
+          <button mat-icon-button (click)="openEditEmployeeDialog(row)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="deleteEmployee(row)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <!-- 行定義 -->
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+    </table>
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,33 @@
+<mat-card class="qualification-enrollment-section">
+    <mat-card-title class="qualification-enrollment-title">資格取得手続き</mat-card-title>
+    <mat-card-content class="qualification-enrollment-content">
+      <form class="qualification-enrollment-form">
+  
+        <mat-form-field appearance="fill" class="form-field join-date">
+          <mat-label>入社日</mat-label>
+          <input matInput type="date">
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-field employment-type">
+          <mat-label>雇用形態</mat-label>
+          <mat-select>
+            <mat-option value="full">正社員</mat-option>
+            <mat-option value="part">パートタイム</mat-option>
+            <mat-option value="contract">契約社員</mat-option>
+          </mat-select>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-field insurance-type">
+          <mat-label>対象保険</mat-label>
+          <mat-select multiple>
+            <mat-option value="kenpo">健康保険</mat-option>
+            <mat-option value="nenkin">厚生年金</mat-option>
+          </mat-select>
+        </mat-form-field>
+  
+        <button mat-raised-button color="primary" class="btn submit-enrollment">資格取得を申請</button>
+  
+      </form>
+    </mat-card-content>
+  </mat-card>
+  

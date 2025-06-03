@@ -1,0 +1,37 @@
+.employee-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .form-field {
+    width: 100%;
+  }
+
+  mat-checkbox {
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+.mat-checkbox {
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.employee-dialog-content {
+  max-height: 70vh;
+  overflow: auto;
+  padding-right: 1rem;
+}
+mat-tab-group {
+  overflow: visible;
+}
+mat-tab-body {
+  overflow: visible !important;
+}
+
+
+  
