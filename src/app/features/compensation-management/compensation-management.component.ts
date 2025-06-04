@@ -5,6 +5,7 @@ import { MaterialModule } from '../../shared/material/material.module';
 import { Timestamp } from '@angular/fire/firestore';
 import { Firestore, collection, doc, setDoc } from '@angular/fire/firestore';
 import { inject, ChangeDetectorRef } from '@angular/core';
+import { cleanData } from '../../core/services/firestore.service';
 
 @Component({
   selector: 'app-compensation-management',
@@ -65,17 +66,15 @@ export class CompensationManagementComponent {
   }
 
   async saveIncomeRecord(empNo: string) {
-    const data = {
+    const data = cleanData({
       ...this.form.value,
       totalMonthlyIncome: this.calculateTotalMonthlyIncome(),
       estimatedAnnualIncome: this.calculateEstimatedAnnualIncome(),
       createdAt: Timestamp.now()
-    };
-
+    });
+    
     const ym = this.form.value.applicableMonth;
     const ref = doc(this.firestore, `employees/${empNo}/incomeRecords/${ym}`);
-    await setDoc(ref, data, { merge: true });
-
-    // Optionally trigger insurance re-evaluation here
+    await setDoc(ref, data, { merge: true });    
   }
 }

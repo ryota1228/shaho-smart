@@ -1,3 +1,4 @@
+import { elementAt } from "rxjs";
 import { PremiumBreakdown } from "../utils/calculateInsurancePremiums";
 
 export interface BonusPremiumRecord {
@@ -11,4 +12,13 @@ export interface BonusPremiumRecord {
     health?: PremiumBreakdown | null;
     pension?: PremiumBreakdown | null;
     care?: PremiumBreakdown | null;
+  }
+
+  export interface BonusRecordInput {
+    applicableMonth: string;
+    amount: number;
+    health?: PremiumBreakdown | null;
+    pension?: PremiumBreakdown | null;
+    care?: PremiumBreakdown | null;
+    includedInStandardBonus?: boolean;
   }

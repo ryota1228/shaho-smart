@@ -1,170 +1,170 @@
 {
   "北海道": {
     "health": {
-      "employee": 0.10310000000000001,
-      "company": 0.10310000000000001
+      "employee": 0.05155,
+      "company": 0.05155
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "青森県": {
     "health": {
-      "employee": 0.09849999999999999,
-      "company": 0.09849999999999999
+      "employee": 0.04925,
+      "company": 0.04925
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "岩手県": {
     "health": {
-      "employee": 0.0962,
-      "company": 0.0962
+      "employee": 0.0481,
+      "company": 0.0481
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "宮城県": {
     "health": {
-      "employee": 0.1011,
-      "company": 0.1011
+      "employee": 0.05055,
+      "company": 0.05055
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "秋田県": {
     "health": {
-      "employee": 0.1001,
-      "company": 0.1001
+      "employee": 0.05005,
+      "company": 0.05005
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "山形県": {
     "health": {
-      "employee": 0.0975,
-      "company": 0.0975
+      "employee": 0.04875,
+      "company": 0.04875
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "福島県": {
     "health": {
-      "employee": 0.0962,
-      "company": 0.0962
+      "employee": 0.0481,
+      "company": 0.0481
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "茨城県": {
     "health": {
-      "employee": 0.0967,
-      "company": 0.0967
+      "employee": 0.04835,
+      "company": 0.04835
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "栃木県": {
     "health": {
-      "employee": 0.09820000000000001,
-      "company": 0.09820000000000001
+      "employee": 0.0491,
+      "company": 0.0491
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "群馬県": {
     "health": {
-      "employee": 0.0977,
-      "company": 0.0977
+      "employee": 0.04885,
+      "company": 0.04885
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "埼玉県": {
     "health": {
-      "employee": 0.09759999999999999,
-      "company": 0.09759999999999999
+      "employee": 0.04875,
+      "company": 0.04875
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "千葉県": {
     "health": {
-      "employee": 0.09789999999999999,
-      "company": 0.09789999999999999
+      "employee": 0.04895,
+      "company": 0.04895
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "東京都": {
@@ -183,86 +183,86 @@
   },
   "神奈川県": {
     "health": {
-      "employee": 0.0992,
-      "company": 0.0992
+      "employee": 0.0496,
+      "company": 0.0496
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "新潟県": {
     "health": {
-      "employee": 0.0955,
-      "company": 0.0955
+      "employee": 0.04775,
+      "company": 0.04775
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "富山県": {
     "health": {
-      "employee": 0.0965,
-      "company": 0.0965
+      "employee": 0.04825,
+      "company": 0.04825
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "石川県": {
     "health": {
-      "employee": 0.09880000000000001,
-      "company": 0.09880000000000001
+      "employee": 0.0494,
+      "company": 0.0494
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "福井県": {
     "health": {
-      "employee": 0.09939999999999999,
-      "company": 0.09939999999999999
+      "employee": 0.0497,
+      "company": 0.0497
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "山梨県": {
     "health": {
-      "employee": 0.0989,
-      "company": 0.0989
+      "employee": 0.04945,
+      "company": 0.04945
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "長野県": {
@@ -271,390 +271,390 @@
       "company": 0.0969
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "岐阜県": {
     "health": {
-      "employee": 0.0993,
-      "company": 0.0993
+      "employee": 0.04965,
+      "company": 0.04965
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "静岡県": {
     "health": {
-      "employee": 0.098,
-      "company": 0.098
+      "employee": 0.049,
+      "company": 0.049
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "愛知県": {
     "health": {
-      "employee": 0.1003,
-      "company": 0.1003
+      "employee": 0.05015,
+      "company": 0.05015
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "三重県": {
     "health": {
-      "employee": 0.0999,
-      "company": 0.0999
+      "employee": 0.04995,
+      "company": 0.04995
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "滋賀県": {
     "health": {
-      "employee": 0.09970000000000001,
-      "company": 0.09970000000000001
+      "employee": 0.04985,
+      "company": 0.04985
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "京都府": {
     "health": {
-      "employee": 0.1003,
-      "company": 0.1003
+      "employee": 0.05015,
+      "company": 0.05015
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "大阪府": {
     "health": {
-      "employee": 0.1024,
-      "company": 0.1024
+      "employee": 0.0512,
+      "company": 0.0512
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "兵庫県": {
     "health": {
-      "employee": 0.1016,
-      "company": 0.1016
+      "employee": 0.0508,
+      "company": 0.0508
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "奈良県": {
     "health": {
-      "employee": 0.1002,
-      "company": 0.1002
+      "employee": 0.0501,
+      "company": 0.0501
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "和歌山県": {
     "health": {
-      "employee": 0.10189999999999999,
-      "company": 0.10189999999999999
+      "employee": 0.05095,
+      "company": 0.05095
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "鳥取県": {
     "health": {
-      "employee": 0.0993,
-      "company": 0.0993
+      "employee": 0.04965,
+      "company": 0.04965
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "島根県": {
     "health": {
-      "employee": 0.09939999999999999,
-      "company": 0.09939999999999999
+      "employee": 0.0497,
+      "company": 0.0497
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "岡山県": {
     "health": {
-      "employee": 0.1017,
-      "company": 0.1017
+      "employee": 0.05085,
+      "company": 0.05085
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "広島県": {
     "health": {
-      "employee": 0.09970000000000001,
-      "company": 0.09970000000000001
+      "employee": 0.04985,
+      "company": 0.04985
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "山口県": {
     "health": {
-      "employee": 0.1036,
-      "company": 0.1036
+      "employee": 0.0518,
+      "company": 0.0518
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "徳島県": {
     "health": {
-      "employee": 0.1047,
-      "company": 0.1047
+      "employee": 0.05235,
+      "company": 0.05235
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "香川県": {
     "health": {
-      "employee": 0.10210000000000001,
-      "company": 0.10210000000000001
+      "employee": 0.05105,
+      "company": 0.05105
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "愛媛県": {
     "health": {
-      "employee": 0.1018,
-      "company": 0.1018
+      "employee": 0.0509,
+      "company": 0.0509
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "高知県": {
     "health": {
-      "employee": 0.1013,
-      "company": 0.1013
+      "employee": 0.05065,
+      "company": 0.05065
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "福岡県": {
     "health": {
-      "employee": 0.10310000000000001,
-      "company": 0.10310000000000001
+      "employee": 0.05155,
+      "company": 0.05155
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "佐賀県": {
     "health": {
-      "employee": 0.10779999999999999,
-      "company": 0.10779999999999999
+      "employee": 0.0539,
+      "company": 0.0539
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "長崎県": {
     "health": {
-      "employee": 0.1041,
-      "company": 0.1041
+      "employee": 0.05205,
+      "company": 0.05205
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "熊本県": {
     "health": {
-      "employee": 0.1012,
-      "company": 0.1012
+      "employee": 0.0506,
+      "company": 0.0506
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "大分県": {
     "health": {
-      "employee": 0.1025,
-      "company": 0.1025
+      "employee": 0.05125,
+      "company": 0.05125
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "宮崎県": {
     "health": {
-      "employee": 0.1009,
-      "company": 0.1009
+      "employee": 0.05045,
+      "company": 0.05045
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "鹿児島県": {
     "health": {
-      "employee": 0.10310000000000001,
-      "company": 0.10310000000000001
+      "employee": 0.05155,
+      "company": 0.05155
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   },
   "沖縄県": {
     "health": {
-      "employee": 0.0944,
-      "company": 0.0944
+      "employee": 0.0472,
+      "company": 0.0472
     },
     "pension": {
-      "employee": 0.183,
-      "company": 0.183
+      "employee": 0.0915,
+      "company": 0.0915
     },
     "care": {
-      "employee": 0.0159,
-      "company": 0.0159
+      "employee": 0.00795,
+      "company": 0.00795
     }
   }
 }

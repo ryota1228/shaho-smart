@@ -7,7 +7,7 @@ import { Dependent } from '../models/dependent.model';
 import { InsurancePremiumRecord } from '../models/insurance-premium.model';
 import { BonusPremiumRecord } from '../models/bonus-premium.model';
 
-function cleanData(obj: Record<string, any>): Record<string, any> {
+export function cleanData(obj: Record<string, any>): Record<string, any> {
   return Object.fromEntries(
     Object.entries(obj).filter(([_, v]) => v !== undefined)
   );
@@ -104,11 +104,11 @@ export class FirestoreService {
       ? doc(this.firestore, 'companies', companyId)
       : doc(companiesCol);
   
-    await setDoc(companyDocRef, company);
+      await setDoc(companyDocRef, cleanData(company));
   
     const employeeColRef = collection(this.firestore, `companies/${companyDocRef.id}/employees`);
     for (const emp of employees) {
-      await addDoc(employeeColRef, emp);
+      await addDoc(employeeColRef, cleanData(emp));
     }
   
     console.log('保存完了:', companyDocRef.id);
@@ -141,19 +141,11 @@ export class FirestoreService {
   
     const ref = doc(this.firestore, `companies/${companyId}/employees/${empId}`);
   
-    const cleaned = {
+    return setDoc(ref, cleanData({
       ...employee,
       isDeleted: false
-    };
-  
-    Object.keys(cleaned).forEach((key) => {
-      if (cleaned[key as keyof Employee] === undefined) {
-        delete cleaned[key as keyof Employee];
-      }
-    });
-  
-    return setDoc(ref, cleaned, { merge: true });
-  }
+    }), { merge: true });
+  }  
 
   async updateCompanyEmployeeCount(companyId: string, count: number): Promise<void> {
     const companyRef = doc(this.firestore, `companies/${companyId}`);
@@ -162,7 +154,6 @@ export class FirestoreService {
     });
   }
   
-
   async checkEmployeeExists(companyId: string, empNo: string): Promise<boolean> {
     const ref = doc(this.firestore, `companies/${companyId}/employees/${empNo}`);
     const snap = await getDoc(ref);
@@ -180,18 +171,21 @@ export class FirestoreService {
       ? doc(this.firestore, 'companies', companyId)
       : doc(companiesCol);
   
-    return setDoc(companyDocRef, company).then(() => companyDocRef.id);
+      return setDoc(companyDocRef, cleanData(company)).then(() => companyDocRef.id);
   }
 
   async saveDependent(companyId: string, empNo: string, dependent: any): Promise<void> {
     const empRef = doc(this.firestore, `companies/${companyId}/employees/${empNo}`);
     const depId = `${dependent.name}_${dependent.birthday}`;
     const ref = doc(collection(empRef, 'dependents'), depId);
-  
+    
     return setDoc(ref, {
-      ...dependent,
+      ...cleanData({
+        ...dependent,
+        birthday: dependent.birthday ? Timestamp.fromDate(dependent.birthday) : null
+      }),
       createdAt: Timestamp.now()
-    }, { merge: true });
+    }, { merge: true });    
   }  
 
   async saveIncomeRecord(companyId: string, empNo: string, yearMonth: string, data: any): Promise<void> {
@@ -199,7 +193,7 @@ export class FirestoreService {
     const ref = doc(collection(empRef, 'incomeRecords'), yearMonth);
   
     return setDoc(ref, {
-      ...data,
+      ...cleanData(data),
       createdAt: Timestamp.now()
     }, { merge: true });
   }  
@@ -226,7 +220,7 @@ export class FirestoreService {
     const empRef = doc(this.firestore, `companies/${companyId}/employees/${empNo}`);
     const ref = doc(collection(empRef, 'bonusRecords'), applicableMonth);
     return setDoc(ref, {
-      ...data,
+      ...cleanData(data),
       createdAt: Timestamp.now()
     }, { merge: true });
   }
@@ -285,7 +279,7 @@ export class FirestoreService {
         `companies/${companyId}/employees/${empNo}/insurancePremiums/${applicableMonth}`
       );
   
-      await setDoc(ref, premiumData);
+      await setDoc(ref, cleanData(premiumData));
       console.log('✅ Firestore 保険料保存完了:', ref.path);
     } catch (err) {
       console.error('🔥 Firestore 保険料保存失敗:', err);
@@ -337,10 +331,13 @@ export class FirestoreService {
       const id = `${dep.name}_${dep.birthday}`;
       const ref = doc(depCol, id);
       return setDoc(ref, {
-        ...dep,
+        ...cleanData({
+          ...dep,
+          birthday: dep.birthday ? Timestamp.fromDate(dep.birthday) : null
+        }),
         createdAt: Timestamp.now()
       }, { merge: true });
-    });
+    });    
   
     await Promise.all(batch);
   }
@@ -352,7 +349,7 @@ export class FirestoreService {
     const batch = bonusDetails.map(bonus => {
       const ref = doc(bonusCol, bonus.applicableMonth);
       return setDoc(ref, {
-        ...bonus,
+        ...cleanData(bonus),
         createdAt: Timestamp.now()
       }, { merge: true });
     });
@@ -374,7 +371,7 @@ export class FirestoreService {
     record: BonusPremiumRecord
   ): Promise<void> {
     const ref = doc(this.firestore, `companies/${companyId}/employees/${empNo}/bonusPremiums/${bonusId}`);
-    await setDoc(ref, record, { merge: true });
+    await setDoc(ref, cleanData(record), { merge: true });
   }
   
   async getBonusPremiumRecords(companyId: string, empNo: string): Promise<BonusPremiumRecord[]> {

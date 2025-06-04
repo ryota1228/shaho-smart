@@ -10,6 +10,7 @@ import { DependentEditDialogComponent } from '../income-form/../dependent-edit-d
 import { ViewChild } from '@angular/core';
 import { IncomeRecordListComponent } from '../income-record-list/income-record-list.component';
 import { BonusSummaryComponent } from '../bonus-summary/bonus-summary.component';
+import { BonusRecordInput } from '../../../../core/models/bonus-premium.model';
 
 
 @Component({
@@ -38,7 +39,11 @@ export class EmployeeEditDialogComponent implements OnInit, AfterViewInit {
   incomeRecords: any[] = [];
   dependents: any[] = [];
 
-  bonusSummary = {
+  bonusSummary: {
+    bonusCount: number;
+    totalBonusAmount: number;
+    bonusDetails: BonusRecordInput[];
+  } = {
     bonusCount: 0,
     totalBonusAmount: 0,
     bonusDetails: []
@@ -126,8 +131,14 @@ export class EmployeeEditDialogComponent implements OnInit, AfterViewInit {
   }
   
 
-  onBonusChange(updated: any): void {
-    this.bonusSummary = { ...updated };
+  onBonusChange(updated: any[]): void {
+    const bonusCount = updated.length;
+    const totalBonusAmount = updated.reduce((sum, r) => sum + (r.amount || 0), 0);
+    this.bonusSummary = {
+      bonusCount,
+      totalBonusAmount,
+      bonusDetails: updated
+    };
   }
 
 checkForWarnings(): string[] {

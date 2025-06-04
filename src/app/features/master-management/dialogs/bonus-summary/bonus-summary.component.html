@@ -12,27 +12,37 @@
           matInput
           type="month"
           [(ngModel)]="detail.applicableMonth"
-          (ngModelChange)="saveRecord(detail)"
+          (ngModelChange)="onRecordChanged()"
           required
         >
       </mat-form-field>
-      
+
       <mat-form-field appearance="fill" class="form-field">
         <mat-label>金額</mat-label>
         <input
           matInput
           type="number"
           [(ngModel)]="detail.amount"
-          (ngModelChange)="saveRecord(detail)"
+          (ngModelChange)="onRecordChanged()"
           min="0"
           required
         >
-      </mat-form-field>      
+      </mat-form-field>
+
+      <mat-checkbox
+      class="checkbox-standard-bonus"
+      [(ngModel)]="detail.includedInStandardBonus"
+      [disabled]="!isCheckboxEnabled(detail)"
+      [matTooltip]="!isCheckboxEnabled(detail) ? '賞与が年4回未満の場合は標準報酬月額に含められません' : ''"
+      (ngModelChange)="onRecordChanged()">
+      標準報酬月額に含める
+    </mat-checkbox>
+
       <button mat-icon-button color="warn" (click)="deleteRecord(i)">
         <mat-icon>delete</mat-icon>
       </button>
     </div>
 
-    <button mat-button (click)="addBonusRecord()">＋ 支給月を追加</button>
+    <button mat-button (click)="addBonusRecord()">＋ 賞与支給月を追加</button>
   </div>
 </div>

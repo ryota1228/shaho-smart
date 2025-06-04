@@ -143,6 +143,10 @@ export class IncomeFormComponent implements OnInit {
 
     const enriched = {
       ...value,
+      baseAmount: value.baseAmount ?? 0,
+      overtimeAmount: value.overtimeAmount ?? 0,
+      allowances: value.allowances ?? [],
+      inKindIncome: value.inKindIncome ?? [],
       totalMonthlyIncome: this.calculateTotalMonthlyIncome(),
       estimatedAnnualIncome: this.calculateEstimatedAnnualIncome(),
       createdAt: new Date().toISOString()

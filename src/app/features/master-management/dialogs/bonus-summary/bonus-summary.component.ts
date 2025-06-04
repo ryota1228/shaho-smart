@@ -1,8 +1,10 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MaterialModule } from '../../../../shared/material/material.module';
-import { FirestoreService } from '../../../../core/services/firestore.service';
+import { cleanData, FirestoreService } from '../../../../core/services/firestore.service';
+import { BonusRecordInput } from '../../../../core/models/bonus-premium.model';
+
 
 @Component({
   selector: 'app-bonus-summary',
@@ -14,8 +16,10 @@ import { FirestoreService } from '../../../../core/services/firestore.service';
 export class BonusSummaryComponent implements OnInit {
   @Input() companyId!: string;
   @Input() empNo!: string;
+  
+  @Output() bonusChange = new EventEmitter<BonusRecordInput[]>();
 
-  bonusRecords: { applicableMonth: string; amount: number }[] = [];
+  bonusRecords: BonusRecordInput[] = [];
 
   constructor(private firestoreService: FirestoreService) {}
 
@@ -30,6 +34,10 @@ export class BonusSummaryComponent implements OnInit {
 
   get bonusCount(): number {
     return this.bonusRecords.length;
+  }
+
+  onRecordChanged() {
+    this.bonusChange.emit([...this.bonusRecords]);
   }
 
   getSummary(): {
@@ -47,19 +55,20 @@ export class BonusSummaryComponent implements OnInit {
   async addBonusRecord(): Promise<void> {
     this.bonusRecords.push({
       applicableMonth: '',
-      amount: 0
+      amount: 0,
+      includedInStandardBonus: false
     });
-  }
-
-  async saveRecord(record: { applicableMonth: string; amount: number }): Promise<void> {
-    if (!record.applicableMonth || !record.amount) return;
-    await this.firestoreService.saveBonusRecord(this.companyId, this.empNo, record.applicableMonth, record);
   }
   
   async deleteRecord(index: number): Promise<void> {
     const record = this.bonusRecords[index];
-    await this.firestoreService.deleteBonusRecord(this.companyId, this.empNo, record.applicableMonth);
     this.bonusRecords.splice(index, 1);
+    this.onRecordChanged();
   }
+
+  isCheckboxEnabled(record: BonusRecordInput): boolean {
+    const uniqueMonths = new Set(this.bonusRecords.map(r => r.applicableMonth));
+    return uniqueMonths.size >= 4;
+  }  
   
 }

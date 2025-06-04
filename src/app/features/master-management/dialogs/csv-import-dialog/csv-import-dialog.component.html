@@ -1,0 +1,24 @@
+<h2 mat-dialog-title>CSVで従業員を一括登録</h2>
+
+<mat-dialog-content>
+  <p>CSVファイルを選択してください（ヘッダー付き形式）</p>
+
+  <input type="file" accept=".csv" (change)="onFileSelected($event)" />
+
+  <div *ngIf="csvError" class="error">
+    {{ csvError }}
+  </div>
+
+  <div *ngIf="parsedData.length > 0">
+    <p>読み込まれた行数: {{ parsedData.length }}</p>
+    <pre>{{ parsedData[0] | json }}</pre>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-raised-button color="primary" (click)="confirmImport()" [disabled]="!parsedData.length">
+    保存して反映する
+  </button>
+
+  <button mat-button (click)="close()">閉じる</button>
+</mat-dialog-actions>

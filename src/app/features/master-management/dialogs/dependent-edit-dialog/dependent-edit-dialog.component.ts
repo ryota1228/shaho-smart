@@ -47,7 +47,10 @@ export class DependentEditDialogComponent implements OnInit {
 
   editDependent(index: number) {
     const dep = this.dependents[index];
-    this.newDependent = { ...dep };
+    this.newDependent = {
+      ...dep,
+      birthday: dep.birthday ? new Date(dep.birthday) : null
+    };
     this.dependents.splice(index, 1);
   }
 

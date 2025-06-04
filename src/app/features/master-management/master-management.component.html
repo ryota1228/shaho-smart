@@ -133,7 +133,14 @@
 <mat-card class="master-card employee-list" *ngIf="selectedCompanyId">
   <mat-card-header>
     <mat-card-title>従業員一覧</mat-card-title>
+
     <div class="employee-header-actions">
+
+      <button mat-stroked-button (click)="openCsvImportDialog()">
+        <mat-icon class="csv-import-icon">folder_open</mat-icon>
+        CSVで従業員を一括登録
+      </button>
+      
       <button mat-flat-button color="primary" (click)="openNewEmployeeDialog()">
         <mat-icon>person_add</mat-icon>
         従業員を追加
@@ -270,3 +277,22 @@
     </table>
   </mat-card-content>
 </mat-card>
+
+<!-- <div *ngIf="isProcessingCsv" class="fullscreen-loader">
+  <mat-progress-spinner mode="indeterminate" diameter="60"></mat-progress-spinner>
+  <p>CSVデータを処理中です。しばらくお待ちください...</p>
+</div>
+
+<div *ngIf="isProcessingDialogSave" class="csv-loading-container">
+  <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+  <span class="csv-loading-text">従業員情報を保存・再評価中です...</span>
+</div> -->
+
+<div *ngIf="isProcessingCsv || isProcessingDialogSave" class="fullscreen-loader">
+  <mat-progress-spinner mode="indeterminate" diameter="60" color="accent"></mat-progress-spinner>
+  <p>
+    {{ isProcessingCsv
+      ? 'CSVデータを処理中です。しばらくお待ちください...'
+      : '従業員情報を保存・再評価中です...' }}
+  </p>
+</div>

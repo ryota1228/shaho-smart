@@ -150,7 +150,8 @@
     <mat-tab label="賞与">
       <app-bonus-summary
       [companyId]="companyId"
-      [empNo]="employee.empNo"></app-bonus-summary>
+      [empNo]="employee.empNo"
+      (bonusChange)="onBonusChange($event)"></app-bonus-summary>
     </mat-tab>
 
     <mat-tab label="扶養者情報">
