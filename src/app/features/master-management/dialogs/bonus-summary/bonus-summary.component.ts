@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MaterialModule } from '../../../../shared/material/material.module';
-import { cleanData, FirestoreService } from '../../../../core/services/firestore.service';
+import { FirestoreService } from '../../../../core/services/firestore.service';
 import { BonusRecordInput } from '../../../../core/models/bonus-premium.model';
 
 

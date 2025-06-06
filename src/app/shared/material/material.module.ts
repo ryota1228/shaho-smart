@@ -22,6 +22,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 const modules = [
   MatCardModule,
@@ -46,7 +47,8 @@ const modules = [
   MatProgressSpinnerModule,
   MatProgressBarModule,
   MatProgressSpinner,
-  MatProgressBar
+  MatProgressBar,
+  MatSlideToggleModule
 ];
 
 @NgModule({

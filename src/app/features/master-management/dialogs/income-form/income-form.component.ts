@@ -39,9 +39,9 @@ export class IncomeFormComponent implements OnInit {
   private createForm(): FormGroup {
     return this.fb.group({
       salaryType: ['monthly', Validators.required],
-      baseAmount: [null, Validators.required],
-      workDays: [null],
-      workingHoursPerDay: [null],
+      baseAmount: [null, [Validators.required, Validators.min(0)]],
+      workDays: [null, [Validators.min(0), Validators.max(31)]],
+      totalWorkingHours: [null, Validators.min(0)],
       allowances: this.fb.array([]),
       inKindIncome: this.fb.array([]),
       bonus: [0],
@@ -82,7 +82,7 @@ export class IncomeFormComponent implements OnInit {
   addAllowance(): void {
     this.allowances.push(this.fb.group({
       name: ['', Validators.required],
-      amount: [0, Validators.required],
+      amount: [0, [Validators.required, Validators.min(0)]],
       includedInRemuneration: [true]
     }));
     this.cdr.detectChanges();
@@ -95,7 +95,7 @@ export class IncomeFormComponent implements OnInit {
   addInKindIncome(): void {
     this.inKindIncome.push(this.fb.group({
       name: ['', Validators.required],
-      amount: [0, Validators.required],
+      amount: [0, [Validators.required, Validators.min(0)]],
       taxable: [true]
     }));
     this.cdr.detectChanges();

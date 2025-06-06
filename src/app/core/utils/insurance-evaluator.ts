@@ -35,12 +35,22 @@ export function evaluateInsuranceStatus(
   };
 }
 
-
-
 function evaluateHealthInsurance(employee: Employee, company: Company, latestIncome?: { totalMonthlyIncome?: number }): Partial<Employee> {
   console.log(`▶ 健康保険判定開始 for ${employee.empNo}`);
 
   const reasons: string[] = [];
+
+  const age = getAge(employee.birthday);
+  console.log(`- 年齢: ${age}`);
+
+  if (age >= 75) {
+    reasons.push('75歳以上（後期高齢者医療制度へ移行）');
+    console.log(`▶ 判定結果: 対象外 (${reasons.join(' / ')})`);
+    return {
+      healthInsuranceStatus: '対象外',
+      healthInsuranceReason: reasons.join('・')
+    };
+  }
 
   const isApplicable = company.isApplicableToHealthInsurance ?? false;
   const employmentType = (employee.employmentType ?? '').trim();
@@ -54,25 +64,24 @@ function evaluateHealthInsurance(employee: Employee, company: Company, latestInc
   } else if (!isRegular) {
     const weeklyOK = employee.weeklyHours >= 20;
     const durationOK = employee.expectedDuration !== 'within2Months';
-    const isStudent = employee.studentStatus !== 'none';
+    const isDaytimeStudent = employee.studentStatus === 'daytime';
     const isShort = employee.weeklyHours < 30;
     const enoughPeople = (company.totalEmployeeCount ?? 0) >= 51;
     const monthlyIncomeOK = (latestIncome?.totalMonthlyIncome ?? 0) >= 88000;
 
     console.log(`- 週勤務時間: ${employee.weeklyHours} → OK=${weeklyOK}`);
     console.log(`- 雇用期間: ${employee.expectedDuration} → OK=${durationOK}`);
-    console.log(`- 学生: ${employee.studentStatus} → isStudent=${isStudent}`);
+    console.log(`- 学生区分: ${employee.studentStatus} → isDaytimeStudent=${isDaytimeStudent}`);
     console.log(`- 従業員数: ${company.totalEmployeeCount} → enoughPeople=${enoughPeople}`);
 
     if (!weeklyOK) reasons.push('週20時間未満');
     if (!durationOK) reasons.push('雇用期間が2か月以内');
-    if (isStudent) reasons.push('学生');
+    if (isDaytimeStudent) reasons.push('昼間部学生');
     if (isShort && !enoughPeople) reasons.push('従業員数が50人以下');
     if (!monthlyIncomeOK) reasons.push('月収8.8万円未満');
   }
 
   const status = reasons.length === 0 ? '加入' : '対象外';
-
   console.log(`▶ 判定結果: ${status} ${reasons.length > 0 ? '(' + reasons.join(' / ') + ')' : ''}`);
 
   return {
@@ -80,6 +89,7 @@ function evaluateHealthInsurance(employee: Employee, company: Company, latestInc
     healthInsuranceReason: reasons.join('・')
   };
 }
+
 
 function evaluatePension(employee: Employee, company: Company, latestIncome?: { totalMonthlyIncome?: number }): Partial<Employee> {
   console.log(`▶ 厚生年金保険判定開始 for ${employee.empNo}`);
@@ -100,19 +110,19 @@ function evaluatePension(employee: Employee, company: Company, latestIncome?: { 
   } else if (!isRegular) {
     const weeklyOK = employee.weeklyHours >= 20;
     const durationOK = employee.expectedDuration !== 'within2Months';
-    const isStudent = employee.studentStatus !== 'none';
+    const isDaytimeStudent = employee.studentStatus === 'daytime';
     const isShort = employee.weeklyHours < 30;
     const enoughPeople = (company.totalEmployeeCount ?? 0) >= 51;
     const monthlyIncomeOK = (latestIncome?.totalMonthlyIncome ?? 0) >= 88000;
 
     console.log(`- 週勤務時間: ${employee.weeklyHours} → OK=${weeklyOK}`);
     console.log(`- 雇用期間: ${employee.expectedDuration} → OK=${durationOK}`);
-    console.log(`- 学生: ${employee.studentStatus} → isStudent=${isStudent}`);
+    console.log(`- 学生区分: ${employee.studentStatus} → isDaytimeStudent=${isDaytimeStudent}`);
     console.log(`- 従業員数: ${company.totalEmployeeCount} → enoughPeople=${enoughPeople}`);
 
     if (!weeklyOK) reasons.push('週20時間未満');
     if (!durationOK) reasons.push('雇用期間が2か月以内');
-    if (isStudent) reasons.push('学生');
+    if (isDaytimeStudent) reasons.push('昼間部学生');
     if (isShort && !enoughPeople) reasons.push('従業員数が50人以下');
     if (!monthlyIncomeOK) reasons.push('月収8.8万円未満');
   }

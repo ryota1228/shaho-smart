@@ -19,8 +19,7 @@ import { getPrefectureFromAddress } from '../../core/utils/prefecture.util';
 import { BonusPremiumRecord } from '../../core/models/bonus-premium.model';
 import { CsvImportDialogComponent } from './dialogs/csv-import-dialog/csv-import-dialog.component';
 import { IncomeRecord } from '../../core/models/income.model';
-
-
+import { toJSTMidnightISO } from '../../core/utils/date-utils';
 
 @Component({
   selector: 'app-master-management',
@@ -297,9 +296,9 @@ export class MasterManagementComponent implements OnInit {
           expectedDuration: ['within2Months', 'over2Months', 'indefinite'].includes(base.expectedDuration!)
             ? base.expectedDuration
             : 'within2Months',
-          joinDate: base.joinDate ? new Date(base.joinDate).toISOString() : '',
-          leaveDate: base.leaveDate ? new Date(base.leaveDate).toISOString() : '',
-          birthday: base.birthday ? new Date(base.birthday).toISOString() : '',
+            joinDate: base.joinDate ? toJSTMidnightISO(new Date(base.joinDate)) : '',
+            leaveDate: base.leaveDate ? toJSTMidnightISO(new Date(base.leaveDate)) : '',
+            birthday: base.birthday ? toJSTMidnightISO(new Date(base.birthday)) : '',            
           gender: validGenders.includes(base.gender!) ? base.gender : undefined,
           studentStatus: validStatuses.includes(base.studentStatus!) ? base.studentStatus : 'none',
           note: base.note?.trim() ?? '',
@@ -420,6 +419,7 @@ export class MasterManagementComponent implements OnInit {
       }
     });
   }
+
     
   deleteEmployee(employee: Employee): void {
     const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {

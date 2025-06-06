@@ -1,0 +1,60 @@
+<div class="insurance-submission-root">
+
+    <mat-form-field appearance="outline" class="company-select">
+      <mat-label>企業選択</mat-label>
+      <mat-select [ngModel]="selectedCompanyId()" (ngModelChange)="selectedCompanyId.set($event); onCompanyChange()">
+        <mat-option *ngFor="let company of companies()" [value]="company.companyId">
+          {{ company.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  
+    <mat-form-field appearance="outline" class="month-select">
+      <mat-label>対象月</mat-label>
+      <input
+        matInput
+        [ngModel]="selectedMonth() | date:'yyyy-MM'"
+        (ngModelChange)="selectedMonth.set($event)"
+        type="month"
+      >
+    </mat-form-field>
+  
+    <h3 class="alert-title">アラート対象従業員</h3>
+    <table mat-table [dataSource]="alertEmployees()" class="mat-elevation-z2 alert-table">
+  
+      <ng-container matColumnDef="empNo">
+        <th mat-header-cell *matHeaderCellDef>社員番号</th>
+        <td mat-cell *matCellDef="let row">{{ row.empNo }}</td>
+      </ng-container>
+  
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>氏名</th>
+        <td mat-cell *matCellDef="let row">{{ row.lastName }} {{ row.firstName }}</td>
+      </ng-container>
+  
+      <ng-container matColumnDef="alertType">
+        <th mat-header-cell *matHeaderCellDef>アラート</th>
+        <td mat-cell *matCellDef="let row">{{ row.alertType }}</td>
+      </ng-container>
+  
+      <!-- <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>操作</th>
+        <td mat-cell *matCellDef="let row">
+            <button
+            mat-raised-button
+            color="primary"
+            *ngIf="!row.alreadySubmitted"
+            (click)="onSubmit()"
+          >
+            届出作成
+          </button>
+          <span *ngIf="row.alreadySubmitted" class="submitted-label">提出済</span>
+        </td>
+      </ng-container> -->
+  
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+  
+  </div>
+  

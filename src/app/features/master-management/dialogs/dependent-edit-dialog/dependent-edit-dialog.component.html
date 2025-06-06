@@ -16,25 +16,30 @@
       <mat-panel-title>新しい扶養者を追加</mat-panel-title>
     </mat-expansion-panel-header>
 
-    <form class="dependent-form" aria-label="新規扶養者入力フォーム">
+    <!-- バリデーション用フォーム -->
+    <form #dependentForm="ngForm" class="dependent-form" aria-label="新規扶養者入力フォーム" (ngSubmit)="addDependent(dependentForm)" novalidate>
+      
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>氏名</mat-label>
-        <input matInput [(ngModel)]="newDependent.name" name="name">
+        <input matInput [(ngModel)]="newDependent.name" name="name" required minlength="2">
+        <mat-error *ngIf="dependentForm.submitted && !newDependent.name">氏名は必須です</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>続柄</mat-label>
-        <mat-select [(ngModel)]="newDependent.relation" name="relation">
+        <mat-select [(ngModel)]="newDependent.relation" name="relation" required>
           <mat-option value="配偶者">配偶者</mat-option>
           <mat-option value="子">子</mat-option>
           <mat-option value="親">親</mat-option>
           <mat-option value="その他">その他</mat-option>
         </mat-select>
+        <mat-error *ngIf="dependentForm.submitted && !newDependent.relation">続柄は必須です</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>生年月日</mat-label>
-        <input matInput type="date" [(ngModel)]="newDependent.birthday" name="birthday">
+        <input matInput type="date" [(ngModel)]="newDependent.birthday" name="birthday" required>
+        <mat-error *ngIf="dependentForm.submitted && !newDependent.birthday">生年月日は必須です</mat-error>
       </mat-form-field>
 
       <mat-checkbox [(ngModel)]="newDependent.livesTogether" name="livesTogether">
@@ -43,11 +48,24 @@
 
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>年間収入（万円）</mat-label>
-        <input matInput type="number" [(ngModel)]="newDependent.income" name="income">
+        <input
+          matInput
+          type="number"
+          [(ngModel)]="newDependent.income"
+          name="income"
+          required
+          min="0"
+        >
+        <mat-error *ngIf="dependentForm.submitted && (newDependent.income === null || newDependent.income < 0)">
+          収入は0万円以上で入力してください
+        </mat-error>
+        <mat-hint *ngIf="newDependent.income !== null && newDependent.income > 1000">
+          ※扶養者の収入が高額です。実態に応じて再確認してください。
+        </mat-hint>
       </mat-form-field>
 
       <div class="form-actions">
-        <button mat-flat-button color="primary" (click)="addDependent()">扶養者を追加</button>
+        <button mat-flat-button color="primary" type="submit">扶養者を追加</button>
       </div>
     </form>
   </mat-expansion-panel>

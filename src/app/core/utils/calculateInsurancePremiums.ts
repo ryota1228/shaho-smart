@@ -14,6 +14,54 @@ export function extractPrefecture(address: string): string {
   return match ? match[1] : 'default';
 }
 
+// 追加：給与額を直接渡して保険料を算出する（新ロジック）
+export function calculatePremiumsFromSalary(
+  salary: number,
+  employee: Employee,
+  company: Company,
+  ratesTable: Record<string, InsuranceRates>,
+  healthGrades: SalaryGrade[],
+  pensionGrades: SalaryGrade[]
+): InsurancePremiumRecord | undefined {
+  if (!salary || !company?.prefecture) return;
+
+  const rates = ratesTable[company.prefecture];
+  if (!rates) return;
+
+  const now = new Date().toISOString();
+
+  const findGrade = (grades: SalaryGrade[]) =>
+    grades.find(g =>
+      salary >= g.lower &&
+      salary < (typeof g.upper === 'string' && g.upper === 'Infinity'
+        ? Number.POSITIVE_INFINITY
+        : g.upper as number)
+    );
+
+  const healthGrade = findGrade(healthGrades);
+  const pensionGrade = findGrade(pensionGrades);
+  const careGrade = employee.careInsuranceStatus?.startsWith('加入') ? healthGrade?.grade ?? null : null;
+
+  const healthMonthly = healthGrade?.monthly ?? 0;
+  const pensionMonthly = pensionGrade?.monthly ?? 0;
+  const careMonthly = careGrade !== null ? healthMonthly : 0;
+
+  return {
+    applicableMonth: '',
+    empNo: employee.empNo,
+    companyId: company.companyId,
+    calculatedAt: now,
+    standardMonthlyAmount: healthMonthly,
+    healthGrade: healthGrade?.grade ?? null,
+    pensionGrade: pensionGrade?.grade ?? null,
+    careGrade,
+    health: calc(rates.health, healthMonthly),
+    pension: calc(rates.pension, pensionMonthly),
+    care: careGrade !== null && rates.care ? calc(rates.care, careMonthly) : null
+  };
+}
+
+// 従来の引数形式を保ったまま内部で salary を算出（後方互換対応）
 export function calculateInsurancePremiums(
   salary: number,
   employee: Employee,
@@ -83,6 +131,7 @@ export function calculateInsurancePremiums(
   return result;
 }
 
+// 共通：保険料計算
 function calc(rate: { employee: number; company: number }, base: number) {
   const employee = roundToInt(base * rate.employee);
   const company = roundToInt(base * rate.company);

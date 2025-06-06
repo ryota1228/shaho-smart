@@ -27,6 +27,16 @@
           <input matInput type="month" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthChange()">
         </mat-form-field>
 
+        <div style="margin-top: 8px;" *ngIf="true">
+          <mat-slide-toggle
+          [(ngModel)]="devForceAllButtons"
+          color="warn"
+          (change)="onDevModeToggleChanged()"
+        >
+          開発モード：すべての操作ボタンを強制有効化
+        </mat-slide-toggle>
+        </div>
+
         <button
           mat-flat-button
           color="primary"
@@ -49,6 +59,7 @@
           <th mat-header-cell *matHeaderCellDef>氏名</th>
           <td mat-cell *matCellDef="let emp">{{ emp.lastName }} {{ emp.firstName }}</td>
         </ng-container>
+
 
         <ng-container matColumnDef="grade">
           <th mat-header-cell *matHeaderCellDef>標準報酬月額</th>
@@ -112,13 +123,38 @@
         </ng-container>
 
         <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>操作</th>
+          <td mat-cell *matCellDef="let emp">
+        
+            <!-- 資格取得 -->
+            <button mat-raised-button color="primary" (click)="registerQualification(emp)" [disabled]="!emp.canRegisterQualification">
+              資格取得
+            </button>
+        
+            <!-- 定時決定 -->
+            <button mat-raised-button color="accent" (click)="registerFixed(emp)" [disabled]="!emp.canRegisterFixed">
+              定時決定
+            </button>
+        
+            <!-- 随時改定 -->
+            <button mat-raised-button color="warn" (click)="registerRevised(emp)" [disabled]="!emp.canRegisterRevised">
+              随時改定
+            </button>
+        
+            <!-- 資格喪失 -->
+            <button mat-raised-button color="warn" (click)="registerLoss(emp)" [disabled]="!emp.canRegisterLoss">
+              資格喪失
+            </button>
+        
+          </td>
+        
           <th mat-header-cell *matHeaderCellDef>履歴</th>
           <td mat-cell *matCellDef="let emp">
             <button mat-icon-button (click)="openPremiumHistory(emp)">
               <mat-icon>history</mat-icon>
             </button>
           </td>
-        </ng-container>
+        </ng-container>        
 
         <tr mat-header-row *matHeaderRowDef="['name', 'grade', 'health', 'pension', 'care', 'actions']"></tr>
         <tr mat-row *matRowDef="let row; columns: ['name', 'grade', 'health', 'pension', 'care', 'actions']"></tr>

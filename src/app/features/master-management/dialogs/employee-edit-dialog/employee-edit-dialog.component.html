@@ -81,10 +81,20 @@
 
         <mat-form-field class="form-field">
           <mat-label>入社日</mat-label>
-          <input matInput [matDatepicker]="joinPicker" [(ngModel)]="employee.joinDate" name="joinDate">
+          <input
+            matInput
+            [matDatepicker]="joinPicker"
+            [(ngModel)]="employee.joinDate"
+            name="joinDate"
+            required
+            #joinDateCtrl="ngModel"
+          >
           <mat-datepicker-toggle matSuffix [for]="joinPicker"></mat-datepicker-toggle>
           <mat-datepicker #joinPicker></mat-datepicker>
-        </mat-form-field>
+          <mat-error *ngIf="joinDateCtrl.invalid && joinDateCtrl.touched">
+            入社日は必須です
+          </mat-error>
+        </mat-form-field>        
 
         <mat-form-field class="form-field">
           <mat-label>退職予定日(未定の場合は空欄可)</mat-label>

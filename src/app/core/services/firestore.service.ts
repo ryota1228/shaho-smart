@@ -1,11 +1,13 @@
 import { Injectable } from '@angular/core';
-import {Firestore, collection, collectionData, doc, setDoc, addDoc, getDocs, CollectionReference, DocumentReference, query, where, updateDoc, deleteDoc, Query, DocumentData, getDoc, Timestamp, orderBy, limit} from '@angular/fire/firestore';
+import {Firestore, collection, collectionData, doc, setDoc, addDoc, getDocs, CollectionReference, DocumentReference, query, where, updateDoc, deleteDoc, Query, DocumentData, getDoc, Timestamp, orderBy, limit, collectionGroup} from '@angular/fire/firestore';
 import { Observable, from, map } from 'rxjs';
 import { Company, NewCompany } from '../models/company.model';
 import { Employee } from '../models/employee.model';
 import { Dependent } from '../models/dependent.model';
-import { InsurancePremiumRecord } from '../models/insurance-premium.model';
+import { EmployeeInsurancePremiums, InsurancePremiumRecord, InsurancePremiumSnapshot, PremiumDetail } from '../models/insurance-premium.model';
 import { BonusPremiumRecord } from '../models/bonus-premium.model';
+import { SubmissionRecord, SubmissionType } from '../models/submission-record.model';
+import { ActualPremiumRecord, ActualPremiumMethod, ActualPremiumEntry } from '../models/actual-premium.model';
 
 export function cleanData(obj: Record<string, any>): Record<string, any> {
   return Object.fromEntries(
@@ -379,5 +381,197 @@ export class FirestoreService {
     const snap = await getDocs(col);
     return snap.docs.map(doc => doc.data() as BonusPremiumRecord);
   }
+
+  async saveInsurancePremiumIfValid(
+    companyId: string,
+    empNo: string,
+    applicableMonth: string,
+    method: 'qualification' | 'fixed' | 'revised' | 'bonus',
+    data: InsurancePremiumSnapshot,
+    operatorUid: string
+  ): Promise<void> {
+    const docRef = doc(this.firestore, `companies/${companyId}/employees/${empNo}/insurancePremiums/${applicableMonth}`);
+    const snapshot = await getDoc(docRef);
+    const existing = snapshot.exists() ? (snapshot.data() as EmployeeInsurancePremiums) : undefined;
   
+    if (existing?.[method] && existing.metadata?.deleted !== true) {
+      throw new Error(`既に「${method}」として保険料が保存済です。再計算するには削除が必要です。`);
+    }
+  
+    const updateData: Partial<EmployeeInsurancePremiums> = {
+      [method]: data,
+      metadata: {
+        updatedAt: Timestamp.now(),
+        updatedBy: operatorUid,
+        deleted: false
+      }
+    };
+  
+    await setDoc(docRef, updateData, { merge: true });
+  }
+
+  async deleteInsurancePremiumRecord(
+    companyId: string,
+    empNo: string,
+    applicableMonth: string,
+    method: 'qualification' | 'fixed' | 'revised' | 'bonus',
+    operatorUid: string
+  ): Promise<void> {
+    const docRef = doc(
+      this.firestore,
+      `companies/${companyId}/employees/${empNo}/insurancePremiums/${applicableMonth}`
+    );
+  
+    const snapshot = await getDoc(docRef);
+    if (!snapshot.exists()) throw new Error('保険料記録が存在しません');
+  
+    const existing = snapshot.data() as EmployeeInsurancePremiums;
+  
+    if (!existing[method]) {
+      throw new Error(`削除対象の保険料（${method}）が存在しません`);
+    }
+  
+    const updateData: Partial<EmployeeInsurancePremiums> = {
+      [method]: null,
+      metadata: {
+        ...existing.metadata,
+        updatedAt: Timestamp.now(),
+        updatedBy: operatorUid,
+        deleted: true,
+        deletedAt: Timestamp.now(),
+        deletedBy: operatorUid
+      }
+    };
+  
+    await setDoc(docRef, updateData, { merge: true });
+  
+    // （任意）削除ログの保存
+    const logRef = collection(
+      this.firestore,
+      `companies/${companyId}/employees/${empNo}/insurancePremiumLogs`
+    );
+  
+    await addDoc(logRef, {
+      month: applicableMonth,
+      method,
+      deletedAt: Timestamp.now(),
+      operator: operatorUid,
+      previousData: existing[method] ?? null
+    });
+  }
+
+  async saveSubmissionRecord(
+    companyId: string,
+    empNo: string,
+    month: string, // '2025-07'
+    type: SubmissionType,
+    createdBy: string,
+    data: any
+  ): Promise<void> {
+    const id = `${month}_${type}`;
+    const ref = doc(this.firestore, `companies/${companyId}/employees/${empNo}/submissions/${id}`);
+    await setDoc(ref, {
+      type,
+      empNo,
+      companyId,
+      applicableMonth: month,
+      createdAt: Timestamp.now(),
+      createdBy,
+      data
+    });
+  }
+
+  async getSubmissionRecords(companyId: string, empNo: string): Promise<SubmissionRecord[]> {
+    const col = collection(this.firestore, `companies/${companyId}/employees/${empNo}/submissions`);
+    const snap = await getDocs(col);
+    return snap.docs.map(doc => doc.data() as SubmissionRecord);
+  }
+
+  async saveActualPremiumRecord(
+    companyId: string,
+    empNo: string,
+    month: string,
+    method: ActualPremiumMethod,
+    snapshot: InsurancePremiumSnapshot,
+    operatorUid: string,
+    submissionId?: string
+  ): Promise<void> {
+    const docRef = doc(this.firestore, `companies/${companyId}/employees/${empNo}/actualPremiums/${month}`);
+    const existingSnap = await getDoc(docRef);
+  
+    if (existingSnap.exists()) {
+      console.warn('⚠ actualPremiums はすでに存在しています。上書きは行いません。');
+      return;
+    }
+  
+    const actualRecord: ActualPremiumRecord = {
+      method,
+      applicableMonth: month,
+      sourceSubmissionId: submissionId ?? '',
+      decidedAt: Timestamp.now(),
+      decidedBy: operatorUid,
+      health: toActualEntry(snapshot.health),
+      pension: toActualEntry(snapshot.pension),
+      care: snapshot.care ? toActualEntry(snapshot.care) : null
+    };
+  
+    await setDoc(docRef, actualRecord);
+    console.log('✅ actualPremiums 保存完了:', docRef.path);
+  }
+
+  async saveActualPremium(
+    companyId: string,
+    empNo: string,
+    month: string,
+    record: ActualPremiumRecord
+  ): Promise<void> {
+    const ref = doc(this.firestore, `companies/${companyId}/employees/${empNo}/actualPremiums/${month}`);
+    await setDoc(ref, record);
+  }
+
+  async getActualPremiumRecords(
+    companyId: string,
+    empNo: string
+  ): Promise<ActualPremiumRecord[]> {
+    const colRef = collection(this.firestore, `companies/${companyId}/employees/${empNo}/actualPremiums`);
+    const snap = await getDocs(colRef);
+    return snap.docs.map(doc => doc.data() as ActualPremiumRecord);
+  }
+  
+  async getLatestIncomeRecordsMap(companyId: string): Promise<Record<string, any>> {
+    const basePath = `companies/${companyId}/employees`;
+    const snap = await getDocs(collectionGroup(this.firestore, 'incomeRecords'));
+  
+    const latestMap: Record<string, any> = {};
+    for (const docSnap of snap.docs) {
+      const empId = docSnap.ref.parent.parent?.id;
+      const data = docSnap.data();
+      if (!empId || !data?.['applicableMonth']) continue;
+  
+      if (!latestMap[empId] || latestMap[empId].applicableMonth < data['applicableMonth']) {
+        latestMap[empId] = data;
+      }
+    }
+    return latestMap;
+  }
+
+  async batchSaveEmployees(companyId: string, employees: Employee[]): Promise<void> {
+    const basePath = `companies/${companyId}/employees`;
+    await Promise.all(
+      employees.map(emp => {
+        const ref = doc(this.firestore, basePath, emp.empNo);
+        return setDoc(ref, cleanData({ ...emp, isDeleted: false }), { merge: true });
+      })
+    );
+  }
+        
+}
+
+function toActualEntry(source: PremiumDetail): ActualPremiumEntry {
+  return {
+    grade: source.grade,
+    total: source.premiumTotal,
+    employee: source.premiumEmployee,
+    company: source.premiumCompany
+  };
 }

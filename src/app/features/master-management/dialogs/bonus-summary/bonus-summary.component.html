@@ -27,6 +27,9 @@
           min="0"
           required
         >
+        <mat-hint *ngIf="detail.amount > 10000000">
+          ※賞与金額が1,000万円を超えています。入力ミスでないかご確認ください。
+        </mat-hint>
       </mat-form-field>
 
       <mat-checkbox

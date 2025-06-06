@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { LoginComponent } from './auth/login/login.component';
 import { authGuard } from './core/guards/auth.guard';
-import { MasterManagementComponent } from './features/master-management/master-management.component';
+
 export const routes: Routes = [
   {
     path: '',
@@ -19,6 +19,7 @@ export const routes: Routes = [
       { path: 'payroll-export', canActivate: [authGuard], loadComponent: () => import('./features/payroll-export/payroll-export.component').then(m => m.PayrollExportComponent) },
       { path: 'qualification-management', canActivate: [authGuard], loadComponent: () => import('./features/qualification-management/qualification-management.component').then(m => m.QualificationManagementComponent) },
       { path: 'qualification-enrollment', canActivate: [authGuard], loadComponent: () => import('./features/qualification-enrollment/qualification-enrollment.component').then(m => m.QualificationEnrollmentComponent) },
+      { path: 'insurance-submission', canActivate: [authGuard], loadComponent: () => import('./features/insurance-submission/insurance-submission.component').then(m => m.InsuranceSubmissionComponent) },
     ]
   },
   {

@@ -21,16 +21,21 @@
   <mat-form-field appearance="fill" class="form-field">
     <mat-label>基本額（円）</mat-label>
     <input matInput type="number" formControlName="baseAmount">
+    <mat-error *ngIf="form.get('baseAmount')?.hasError('required')">基本額は必須です</mat-error>
+    <mat-error *ngIf="form.get('baseAmount')?.hasError('min')">0円以上を入力してください</mat-error>
   </mat-form-field>
 
   <mat-form-field *ngIf="form.value.salaryType === 'hourly'" appearance="fill" class="form-field">
     <mat-label>月の労働時間合計（h）</mat-label>
     <input matInput type="number" formControlName="totalWorkingHours">
-  </mat-form-field>  
+    <mat-error *ngIf="form.get('totalWorkingHours')?.hasError('min')">0時間以上で入力してください</mat-error>
+  </mat-form-field>
 
   <mat-form-field *ngIf="form.value.salaryType !== 'monthly'" appearance="fill" class="form-field">
     <mat-label>勤務日数</mat-label>
     <input matInput type="number" formControlName="workDays">
+    <mat-error *ngIf="form.get('workDays')?.hasError('min')">0日以上で入力してください</mat-error>
+    <mat-error *ngIf="form.get('workDays')?.hasError('max')">31日以内で入力してください</mat-error>
   </mat-form-field>
 
   <!-- 手当 -->
@@ -50,7 +55,10 @@
         <mat-form-field class="form-field">
           <mat-label>金額</mat-label>
           <input matInput type="number" formControlName="amount">
+          <mat-error *ngIf="allowance.get('amount')?.hasError('required')">金額は必須です</mat-error>
+          <mat-error *ngIf="allowance.get('amount')?.hasError('min')">0円以上を入力してください</mat-error>
         </mat-form-field>
+
       </div>
   
       <div class="item-checkbox">
@@ -76,11 +84,14 @@
           <mat-label>項目名</mat-label>
           <input matInput formControlName="name" placeholder="例：社宅・寮・社食など">
         </mat-form-field>
-  
+
         <mat-form-field class="form-field">
           <mat-label>金額</mat-label>
-          <input matInput type="number" formControlName="amount" placeholder="金額">
+          <input matInput type="number" formControlName="amount">
+          <mat-error *ngIf="item.get('amount')?.hasError('required')">金額は必須です</mat-error>
+          <mat-error *ngIf="item.get('amount')?.hasError('min')">0円以上を入力してください</mat-error>
         </mat-form-field>
+
       </div>
   
       <div class="item-checkbox">

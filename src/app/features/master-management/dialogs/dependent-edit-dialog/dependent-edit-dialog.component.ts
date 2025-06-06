@@ -1,6 +1,6 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms'; // ✅ NgFormを追加
 import { MaterialModule } from '../../../../shared/material/material.module';
 import { Dependent } from '../../../../core/models/dependent.model';
 import { FirestoreService } from '../../../../core/services/firestore.service';
@@ -34,8 +34,12 @@ export class DependentEditDialogComponent implements OnInit {
     }
   }
 
-  addDependent() {
+  // ✅ バリデーション付き addDependent
+  addDependent(form: NgForm): void {
+    if (form.invalid) return;
+
     this.dependents.push({ ...this.newDependent });
+
     this.newDependent = {
       name: '',
       relation: '',
@@ -43,6 +47,8 @@ export class DependentEditDialogComponent implements OnInit {
       livesTogether: false,
       income: null
     };
+
+    form.resetForm(); // ✅ 入力値とバリデーション状態を初期化
   }
 
   editDependent(index: number) {

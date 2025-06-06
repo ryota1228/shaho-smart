@@ -278,16 +278,6 @@
   </mat-card-content>
 </mat-card>
 
-<!-- <div *ngIf="isProcessingCsv" class="fullscreen-loader">
-  <mat-progress-spinner mode="indeterminate" diameter="60"></mat-progress-spinner>
-  <p>CSVデータを処理中です。しばらくお待ちください...</p>
-</div>
-
-<div *ngIf="isProcessingDialogSave" class="csv-loading-container">
-  <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
-  <span class="csv-loading-text">従業員情報を保存・再評価中です...</span>
-</div> -->
-
 <div *ngIf="isProcessingCsv || isProcessingDialogSave" class="fullscreen-loader">
   <mat-progress-spinner mode="indeterminate" diameter="60" color="accent"></mat-progress-spinner>
   <p>
