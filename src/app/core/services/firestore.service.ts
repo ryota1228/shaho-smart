@@ -555,6 +555,21 @@ export class FirestoreService {
     return latestMap;
   }
 
+  async getLatestInsurancePremiumsMap(companyId: string): Promise<Record<string, InsurancePremiumRecord | undefined>> {
+    const employees = await this.getEmployeesForCompany(companyId).toPromise();
+    const result: Record<string, InsurancePremiumRecord | undefined> = {};
+  
+    await Promise.all(
+      (employees ?? []).map(async emp => {
+        const latest = await this.getLatestInsurancePremium(companyId, emp.empNo);
+        result[emp.empNo] = latest ?? undefined;
+      })
+    );
+  
+    return result;
+  }
+  
+  
   async batchSaveEmployees(companyId: string, employees: Employee[]): Promise<void> {
     const basePath = `companies/${companyId}/employees`;
     await Promise.all(

@@ -116,23 +116,23 @@ export class MasterManagementComponent implements OnInit {
     if (!this.selectedCompanyId || !this.companyInfo) return;
   
     this.firestoreService.getEmployeesForCompany(this.selectedCompanyId).subscribe(async (employees) => {
-      const enriched = await Promise.all(
-        employees.map(async emp => {
-          const latestPremium = await this.firestoreService.getLatestInsurancePremium(this.selectedCompanyId!, emp.empNo);
-          return {
-            ...emp,
-            standardMonthlyAmount: latestPremium?.standardMonthlyAmount ?? null,
-            healthGrade: latestPremium?.healthGrade ?? null,
-            pensionGrade: latestPremium?.pensionGrade ?? null,
-            careGrade: latestPremium?.careGrade ?? null
-          };
-        })
-      );
+      const premiumsMap = await this.firestoreService.getLatestInsurancePremiumsMap(this.selectedCompanyId!);
+  
+      const enriched = employees.map(emp => {
+        const premium = premiumsMap[emp.empNo];
+        return {
+          ...emp,
+          standardMonthlyAmount: premium?.standardMonthlyAmount ?? undefined,
+          healthGrade: premium?.healthGrade ?? undefined,
+          pensionGrade: premium?.pensionGrade ?? undefined,
+          careGrade: premium?.careGrade ?? undefined
+        };
+      });
   
       this.allEmployees = enriched;
       this.applyFilter();
     });
-  }
+  }  
 
   openCustomRatesDialog(): void {
     if (!this.companyInfo) return;
@@ -296,9 +296,9 @@ export class MasterManagementComponent implements OnInit {
           expectedDuration: ['within2Months', 'over2Months', 'indefinite'].includes(base.expectedDuration!)
             ? base.expectedDuration
             : 'within2Months',
-            joinDate: base.joinDate ? toJSTMidnightISO(new Date(base.joinDate)) : '',
-            leaveDate: base.leaveDate ? toJSTMidnightISO(new Date(base.leaveDate)) : '',
-            birthday: base.birthday ? toJSTMidnightISO(new Date(base.birthday)) : '',            
+          joinDate: base.joinDate ? toJSTMidnightISO(new Date(base.joinDate)) : '',
+          leaveDate: base.leaveDate ? toJSTMidnightISO(new Date(base.leaveDate)) : '',
+          birthday: base.birthday ? toJSTMidnightISO(new Date(base.birthday)) : '',
           gender: validGenders.includes(base.gender!) ? base.gender : undefined,
           studentStatus: validStatuses.includes(base.studentStatus!) ? base.studentStatus : 'none',
           note: base.note?.trim() ?? '',
@@ -320,7 +320,6 @@ export class MasterManagementComponent implements OnInit {
   
         await this.firestoreService.saveEmployee(this.selectedCompanyId, cleaned);
   
-        // 🔽 月額報酬データ保存＋該当月の保険料算出
         if (incomeRecords?.length) {
           for (const record of incomeRecords) {
             if (!record.applicableMonth || !record.totalMonthlyIncome) continue;
@@ -393,7 +392,7 @@ export class MasterManagementComponent implements OnInit {
           }
         }
   
-        // 🔄 再取得＆加入判定（latestIncomeのみ評価に使う）
+        // 🔄 再評価：一括取得＋一括保存
         const employeeList = await this.firestoreService.getEmployeesForCompany(this.selectedCompanyId!).toPromise();
         const count = employeeList?.length ?? 0;
         await this.firestoreService.updateCompanyEmployeeCount(this.selectedCompanyId!, count);
@@ -401,12 +400,33 @@ export class MasterManagementComponent implements OnInit {
         const updatedCompany = await this.firestore.getCompany(this.selectedCompanyId!);
         if (updatedCompany) this.companyInfo = updatedCompany;
   
-        for (const emp of employeeList ?? []) {
-          const latestIncome = await this.firestoreService.getLatestIncomeRecord(this.selectedCompanyId!, emp.empNo);
+        const latestMap = await this.firestoreService.getLatestIncomeRecordsMap(this.selectedCompanyId!);
+        const updatedEmployees = (employeeList ?? []).map(emp => {
+          const latestIncome = latestMap[emp.empNo];
           const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome);
-          const updatedEmp = { ...emp, ...evaluated };
-          await this.firestoreService.saveEmployee(this.selectedCompanyId!, updatedEmp);
-        }
+  
+          const premiums = latestIncome
+            ? calculateInsurancePremiums(
+                latestIncome.totalMonthlyIncome,
+                { ...emp, ...evaluated },
+                this.companyInfo!,
+                this.insuranceRatesTable,
+                this.salaryGradeTable,
+                this.pensionGradeTable
+              )
+            : null;
+  
+          return {
+            ...emp,
+            ...evaluated,
+            standardMonthlyAmount: premiums?.standardMonthlyAmount ?? undefined,
+            healthGrade: (premiums as any)?.health?.grade ?? undefined,
+            pensionGrade: (premiums as any)?.pension?.grade ?? undefined,
+            careGrade: (premiums as any)?.care?.grade ?? undefined
+          } as Employee;
+        });
+  
+        await this.firestoreService.batchSaveEmployees(this.selectedCompanyId!, updatedEmployees);
   
         this.snackbar.open('保存に成功しました（再評価済）', '閉じる', { duration: 3000 });
         this.loadEmployees();
@@ -420,7 +440,6 @@ export class MasterManagementComponent implements OnInit {
     });
   }
 
-    
   deleteEmployee(employee: Employee): void {
     const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {
       width: '360px',
@@ -440,14 +459,33 @@ export class MasterManagementComponent implements OnInit {
         const updatedCompany = await this.firestore.getCompany(this.selectedCompanyId!);
         if (updatedCompany) this.companyInfo = updatedCompany;
   
-        const reevaluated = employeeList?.map(emp => ({
-          ...emp,
-          ...evaluateInsuranceStatus(emp, this.companyInfo!)
-        })) ?? [];
+        const latestMap = await this.firestoreService.getLatestIncomeRecordsMap(this.selectedCompanyId!);
+        const updatedEmployees = (employeeList ?? []).map(emp => {
+          const latestIncome = latestMap[emp.empNo];
+          const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome);
   
-        await Promise.all(
-          reevaluated.map(emp => this.firestoreService.saveEmployee(this.selectedCompanyId!, emp))
-        );
+          const premiums = latestIncome
+            ? calculateInsurancePremiums(
+                latestIncome.totalMonthlyIncome,
+                { ...emp, ...evaluated },
+                this.companyInfo!,
+                this.insuranceRatesTable,
+                this.salaryGradeTable,
+                this.pensionGradeTable
+              )
+            : null;
+  
+          return {
+            ...emp,
+            ...evaluated,
+            standardMonthlyAmount: premiums?.standardMonthlyAmount ?? undefined,
+            healthGrade: (premiums as any)?.health?.grade ?? undefined,
+            pensionGrade: (premiums as any)?.pension?.grade ?? undefined,
+            careGrade: (premiums as any)?.care?.grade ?? undefined
+          } as Employee;
+        });
+  
+        await this.firestoreService.batchSaveEmployees(this.selectedCompanyId!, updatedEmployees);
   
         this.snackbar.open('従業員を削除しました（再評価済）', '閉じる', { duration: 3000 });
         this.loadEmployees();
@@ -456,55 +494,73 @@ export class MasterManagementComponent implements OnInit {
         this.snackbar.open('削除に失敗しました', '閉じる');
       }
     });
-  }  
-
-  saveCompanyData(): void {
+  }
+    
+  async saveCompanyData(): Promise<void> {
     if (!this.companyInfo) return;
-  
     const id = this.selectedCompanyId ?? null;
   
-    this.firestoreService.saveCompanyOnly(id, this.companyInfo)
-      .then(async (savedId) => {
-        this.snackbar.open('企業情報を保存しました', '閉じる', { duration: 3000 });
+    try {
+      const savedId = await this.firestoreService.saveCompanyOnly(id, this.companyInfo);
+      this.selectedCompanyId = savedId;
+      this.companyInfo!.companyId = savedId;
   
-        this.selectedCompanyId = savedId;
-        this.companyInfo!.companyId = savedId;
+      // 🔽 従業員一覧の取得（再評価用）
+      const employeeList = await this.firestoreService.getEmployeesForCompany(savedId).toPromise();
+      const employees = employeeList ?? [];
   
-        const employeeList = await this.firestoreService.getEmployeesForCompany(savedId).toPromise();
-        const employees = employeeList ?? [];
+      // 🔽 最新収入情報の一括取得
+      const latestMap = await this.firestoreService.getLatestIncomeRecordsMap(savedId);
   
-        const updatedEmployees = await Promise.all(
-          employees.map(async emp => {
-            const latestIncome = await this.firestoreService.getLatestIncomeRecord(savedId, emp.empNo);
-            return {
-              ...emp,
-              ...evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome)
-            };
-          })
-        );
+      // 🔄 加入判定＋等級付与（元と同じフィールド構成）
+      const updatedEmployees: Employee[] = employees.map(emp => {
+        const latestIncome = latestMap[emp.empNo];
+        const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome);
   
-        await Promise.all(
-          updatedEmployees.map(emp =>
-            this.firestoreService.saveEmployee(savedId, emp)
-          )
-        );
+        const premiums = latestIncome
+          ? calculateInsurancePremiums(
+              latestIncome.totalMonthlyIncome,
+              { ...emp, ...evaluated },
+              this.companyInfo!,
+              this.insuranceRatesTable,
+              this.salaryGradeTable,
+              this.pensionGradeTable
+            )
+          : null;
   
-        this.refreshEmployeeList();
-  
-        const uid = this.authService.getUid();
-        if (uid) {
-          this.firestoreService.getCompanyListByUser(uid).subscribe(companies => {
-            this.companyList = companies;
-            const updated = companies.find(c => c.companyId === savedId);
-            if (updated) this.selectCompany(updated);
-          });
-        }
-      })
-      .catch((err) => {
-        console.error('保存エラー:', err);
-        this.snackbar.open('企業情報の保存に失敗しました', '閉じる');
+        return {
+          ...emp,
+          ...evaluated,
+          standardMonthlyAmount: premiums?.standardMonthlyAmount ?? undefined,
+          healthGrade: (premiums as any)?.health?.grade ?? undefined,
+          pensionGrade: (premiums as any)?.pension?.grade ?? undefined,
+          careGrade: (premiums as any)?.care?.grade ?? undefined
+        } as Employee;
       });
-  }
+  
+      // 🔽 一括保存（I/O効率化）
+      await this.firestoreService.batchSaveEmployees(savedId, updatedEmployees);
+  
+      // 🔽 従業員数更新
+      await this.firestoreService.updateCompanyEmployeeCount(savedId, updatedEmployees.length);
+  
+      // 🔽 企業一覧更新＋再選択
+      const uid = this.authService.getUid();
+      if (uid) {
+        this.firestoreService.getCompanyListByUser(uid).subscribe(companies => {
+          this.companyList = companies;
+          const updated = companies.find(c => c.companyId === savedId);
+          if (updated) this.selectCompany(updated);
+        });
+      }
+  
+      this.snackbar.open('企業情報を保存しました（再評価済）', '閉じる', { duration: 3000 });
+  
+    } catch (err) {
+      console.error('保存エラー:', err);
+      this.snackbar.open('企業情報の保存に失敗しました', '閉じる');
+    }
+  }  
 
   formatPostalCode(): void {
     if (!this.companyInfo) return;
@@ -537,7 +593,8 @@ export class MasterManagementComponent implements OnInit {
     this.isProcessingCsv = true;
   
     try {
-      // 🔽 1. CSV行ごとに保存（加入判定・保険料算出はこのあと）
+      const employeeMap = new Map<string, Employee>();
+  
       for (const row of parsedData) {
         const empNo = row.empNo?.trim();
         if (!empNo) continue;
@@ -561,9 +618,9 @@ export class MasterManagementComponent implements OnInit {
           note: row.note
         };
   
+        employeeMap.set(empNo, employee);
         await this.firestore.saveEmployee(this.selectedCompanyId, employee);
   
-        // 🔽 給与データ
         if (row.applicableMonth && row.baseAmount) {
           const income: IncomeRecord = {
             applicableMonth: row.applicableMonth,
@@ -578,7 +635,6 @@ export class MasterManagementComponent implements OnInit {
           await this.firestore.saveIncomeRecord(this.selectedCompanyId, empNo, row.applicableMonth, income);
         }
   
-        // 🔽 賞与データ
         if (row.bonusMonth && row.bonusAmount) {
           await this.firestore.saveBonusRecord(this.selectedCompanyId, empNo, row.bonusMonth, {
             applicableMonth: row.bonusMonth,
@@ -587,12 +643,10 @@ export class MasterManagementComponent implements OnInit {
         }
       }
   
-      // 🔽 2. 従業員数をカウントして企業に反映
-      const employeeList = await this.firestore.getEmployeesForCompany(this.selectedCompanyId).toPromise();
-      const employeeCount = (employeeList ?? []).length;
+      const employeeList = Array.from(employeeMap.values());
+      const employeeCount = employeeList.length;
       await this.firestore.updateCompanyEmployeeCount(this.selectedCompanyId, employeeCount);
   
-      // 🔽 3. 再取得した企業情報で判定を行う
       const company = await this.firestore.getCompany(this.selectedCompanyId);
       if (!company) {
         this.snackbar.open('❌ 企業情報の取得に失敗しました', '閉じる', { duration: 5000 });
@@ -601,55 +655,62 @@ export class MasterManagementComponent implements OnInit {
         this.companyInfo = company;
       }
   
-      // 🔽 4. 加入判定・全月保険料算出・再保存
-      let successCount = 0;
-      let failCount = 0;
+      const latestMap = await this.firestoreService.getLatestIncomeRecordsMap(this.selectedCompanyId);
+      const updatedEmployees = employeeList.map(emp => {
+        const latestIncome = latestMap[emp.empNo];
+        const evaluated = evaluateInsuranceStatus(emp, company, latestIncome);
   
-      for (const emp of employeeList ?? []) {
-        try {
-          const incomeRecords = await this.firestore.getIncomeRecords(this.selectedCompanyId, emp.empNo);
-          const latestIncome = incomeRecords
-            .sort((a, b) => b.applicableMonth.localeCompare(a.applicableMonth))[0];
-  
-          // 🧠 加入判定
-          const evaluated = evaluateInsuranceStatus(emp, company, latestIncome);
-          const updatedEmp = { ...emp, ...evaluated };
-          await this.firestore.saveEmployee(this.selectedCompanyId, updatedEmp);
-  
-          // 💰 全月保険料を算出・保存
-          for (const income of incomeRecords) {
-            const premiums = calculateInsurancePremiums(
-              income.totalMonthlyIncome,
-              updatedEmp,
+        const premiums = latestIncome
+          ? calculateInsurancePremiums(
+              latestIncome.totalMonthlyIncome,
+              { ...emp, ...evaluated },
               company,
               this.insuranceRatesTable,
               this.salaryGradeTable,
               this.pensionGradeTable
-            );
-            if (premiums) {
-              await this.firestore.saveInsurancePremium(
-                this.selectedCompanyId,
-                emp.empNo,
-                income.applicableMonth,
-                { ...premiums, applicableMonth: income.applicableMonth }
-              );
-            }
-          }
+            )
+          : null;
   
-          successCount++;
-        } catch (err) {
-          console.error(`❌ 判定エラー (empNo: ${emp.empNo}):`, err);
-          failCount++;
+        return {
+          ...emp,
+          ...evaluated,
+          standardMonthlyAmount: premiums?.standardMonthlyAmount ?? undefined,
+          healthGrade: (premiums as any)?.health?.grade ?? undefined,
+          pensionGrade: (premiums as any)?.pension?.grade ?? undefined,
+          careGrade: (premiums as any)?.care?.grade ?? undefined
+        } as Employee;
+      });
+  
+      await this.firestoreService.batchSaveEmployees(this.selectedCompanyId, updatedEmployees);
+  
+      for (const emp of updatedEmployees) {
+        const incomeRecords = await this.firestore.getIncomeRecords(this.selectedCompanyId, emp.empNo);
+        for (const income of incomeRecords) {
+          const premiums = calculateInsurancePremiums(
+            income.totalMonthlyIncome,
+            emp,
+            company,
+            this.insuranceRatesTable,
+            this.salaryGradeTable,
+            this.pensionGradeTable
+          );
+          if (premiums) {
+            await this.firestore.saveInsurancePremium(
+              this.selectedCompanyId,
+              emp.empNo,
+              income.applicableMonth,
+              { ...premiums, applicableMonth: income.applicableMonth }
+            );
+          }
         }
       }
   
-      this.snackbar.open(`CSV取込完了 ✅ 判定成功: ${successCount}件 / 失敗: ${failCount}件`, '閉じる', { duration: 6000 });
+      this.snackbar.open(`CSV取込完了 ✅ 従業員数: ${employeeCount}`, '閉じる', { duration: 6000 });
       this.loadEmployees();
     } finally {
       this.isProcessingCsv = false;
     }
-  }
-  
+  }  
   
   openCsvImportDialog(): void {
     if (!this.selectedCompanyId) return;
