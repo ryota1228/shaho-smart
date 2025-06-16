@@ -62,9 +62,23 @@ export class BonusSummaryComponent implements OnInit {
   
   async deleteRecord(index: number): Promise<void> {
     const record = this.bonusRecords[index];
-    this.bonusRecords.splice(index, 1);
-    this.onRecordChanged();
+    const confirmed = confirm(`「${record.applicableMonth} の賞与」を削除してもよろしいですか？`);
+    if (!confirmed) return;
+  
+    try {
+
+      const bonusId = record.id ?? record.applicableMonth;
+      await this.firestoreService.deleteBonusRecord(this.companyId, this.empNo, bonusId);      
+  
+      this.bonusRecords.splice(index, 1);
+      this.onRecordChanged();
+  
+    } catch (err) {
+      console.error('賞与削除エラー:', err);
+      alert('賞与の削除に失敗しました');
+    }
   }
+  
 
   isCheckboxEnabled(record: BonusRecordInput): boolean {
     const uniqueMonths = new Set(this.bonusRecords.map(r => r.applicableMonth));

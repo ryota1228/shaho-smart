@@ -4,4 +4,5 @@ export interface Dependent {
     birthday: Date | null;
     livesTogether: boolean;
     income: number | null;
+    id?: string;
   }

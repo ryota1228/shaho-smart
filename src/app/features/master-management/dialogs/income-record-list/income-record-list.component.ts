@@ -5,11 +5,13 @@ import { MatDialog } from '@angular/material/dialog';
 import { IncomeFormComponent } from '../income-form/income-form.component';
 import { doc, deleteDoc } from '@angular/fire/firestore';
 import { Firestore } from '@angular/fire/firestore';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatChipListbox } from '@angular/material/chips';
 
 @Component({
   selector: 'app-income-record-list',
   standalone: true,
-  imports: [CommonModule, MaterialModule],
+  imports: [CommonModule, MaterialModule, MatChipsModule],
   templateUrl: './income-record-list.component.html',
   styleUrls: ['./income-record-list.component.scss']
 })
@@ -17,6 +19,7 @@ export class IncomeRecordListComponent implements OnInit {
   @Input() companyId!: string;
   @Input() empNo!: string;
   @Input() incomeRecords: any[] = [];
+  @Input() bonusMergedIntoMonthly: boolean = false;
 
   @Output() incomeRecordsChange = new EventEmitter<any[]>();
 

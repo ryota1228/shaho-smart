@@ -28,6 +28,16 @@ export function getSalaryGrade(income: number, grades: SalaryGrade[]): SalaryGra
   return grades[0];
 }
 
+export function getStandardSalaryGrade(
+  amount: number,
+  gradeTable: SalaryGrade[]
+): SalaryGrade | undefined {
+  return gradeTable.find(g => {
+    const upper = typeof g.upper === 'number' ? g.upper : Number(g.upper);
+    return amount >= g.lower && amount < upper;
+  });
+}
+
   
 
   

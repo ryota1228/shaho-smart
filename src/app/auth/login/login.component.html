@@ -1,27 +1,50 @@
 <mat-card class="login-card">
-    <mat-card-title class="login-title">ログイン</mat-card-title>
-    <mat-card-content class="login-form-content">
-      <form class="login-form" (ngSubmit)="login()">
-        <mat-form-field appearance="fill" class="form-field email">
-          <mat-label>メールアドレス</mat-label>
-          <input matInput type="email" [(ngModel)]="email" name="email" required>
+  <mat-card-title class="login-title">
+    {{ isRegistering ? '新規登録' : 'ログイン' }}
+  </mat-card-title>
+
+  <mat-card-content class="login-form-content">
+
+    <div *ngIf="isRegistering" class="register-warning">
+      <span style="color: #c62828; font-weight: bold;">
+        この画面は、<u>企業の管理者が最初に1回のみ使用</u>します。<br>
+        一般社員のアカウントは、管理者が企業・従業員情報画面から登録してください。
+      </span>
+    </div>
+    
+    <form class="login-form" (ngSubmit)="isRegistering ? register() : login()">
+      <mat-form-field appearance="fill" class="form-field email">
+        <mat-label>メールアドレス</mat-label>
+        <input matInput type="email" [(ngModel)]="email" name="email" required>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="form-field password">
+        <mat-label>パスワード</mat-label>
+        <input matInput type="password" [(ngModel)]="password" name="password" required>
+      </mat-form-field>
+
+      <div *ngIf="isRegistering">
+
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>姓</mat-label>
+          <input matInput [(ngModel)]="employeeLastName" name="lastName" required>
         </mat-form-field>
-  
-        <mat-form-field appearance="fill" class="form-field password">
-          <mat-label>パスワード</mat-label>
-          <input matInput type="password" [(ngModel)]="password" name="password" required>
+
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>名</mat-label>
+          <input matInput [(ngModel)]="employeeFirstName" name="firstName" required>
         </mat-form-field>
-  
-        <mat-checkbox class="remember-me">ログイン状態を保持</mat-checkbox>
-  
-        <button mat-raised-button color="primary" class="btn login-submit" type="submit">
-          ログイン
-        </button>
-      </form>
-  
-      <div class="login-links">
-        <a class="forgot-password" href="#">パスワードを忘れた場合</a>
       </div>
-    </mat-card-content>
-  </mat-card>
-  
+
+      <button mat-raised-button color="primary" class="btn login-submit" type="submit">
+        {{ isRegistering ? '登録する' : 'ログイン' }}
+      </button>
+    </form>
+
+    <div class="login-links">
+      <a (click)="toggleRegister()" style="cursor: pointer;">
+        {{ isRegistering ? 'ログインに戻る' : '新規登録（管理者向け）はこちら' }}
+      </a>
+    </div>
+  </mat-card-content>
+</mat-card>

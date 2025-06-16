@@ -21,4 +21,5 @@ export interface BonusPremiumRecord {
     pension?: PremiumBreakdown | null;
     care?: PremiumBreakdown | null;
     includedInStandardBonus?: boolean;
+    id?: string;
   }

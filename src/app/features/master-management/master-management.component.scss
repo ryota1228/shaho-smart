@@ -229,5 +229,47 @@ mat-card-content {
   }
 }
 
+mat-checkbox[disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
 
+.disabled-checkbox {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+// 任意適用チェックボックスの横並び調整（従来 .checkbox-row を活かす）
+.checkbox-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+// 余白の少ないチェックボックス列（保険情報内で利用）
+.tight-checkbox-row {
+  margin-top: 4px;
+  margin-bottom: 0;
+  gap: 24px;
+
+  mat-checkbox {
+    margin-bottom: 0;
+    padding: 0;
+  }
+}
+
+.col-role-toggle {
+  text-align: center;
+  min-width: 160px;
+}
+
+tr.incomplete {
+  background-color: #ffe5e5;
+  font-weight: bold;
+
+  td {
+    color: #b71c1c;
+  }
+}
 

@@ -1,4 +1,5 @@
 import { Timestamp } from '@angular/fire/firestore';
+import { StandardMonthlyAmountBreakdown } from './insurance-premium.model';
 
 export type ActualPremiumMethod = 'qualification' | 'fixed' | 'revised' | 'loss';
 
@@ -10,12 +11,36 @@ export interface ActualPremiumEntry {
 }
 
 export interface ActualPremiumRecord {
-  method: ActualPremiumMethod;
   applicableMonth: string;
-  sourceSubmissionId: string;
+  calculatedAt: string;
+  empNo: string;
+  companyId: string;
+  standardMonthlyAmount: number;
+
+  method: ActualPremiumMethod;
+  sourceSubmissionId?: string;
   decidedAt: Timestamp;
-  decidedBy: string;
-  health: ActualPremiumEntry;
-  pension?: ActualPremiumEntry;
-  care: ActualPremiumEntry | null;
+  decidedBy: string;  
+
+  healthGrade: number | null;
+  pensionGrade: number | null;
+  careGrade: number | null;
+
+  health: {
+    employee: number | null;
+    company: number | null;
+    total: number | null;
+  };
+  pension: {
+    employee: number | null;
+    company: number | null;
+    total: number | null;
+  };
+  care: {
+    employee: number | null;
+    company: number | null;
+    total: number | null;
+  } | null;
+
+  standardMonthlyAmountBreakdown?: StandardMonthlyAmountBreakdown;
 }

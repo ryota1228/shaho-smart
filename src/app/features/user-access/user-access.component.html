@@ -1,30 +1,45 @@
+<div class="company-switch">
+  <mat-form-field appearance="outline" floatLabel="always">
+    <mat-label>企業を選択</mat-label>
+    <mat-select [value]="selectedCompanyId" (selectionChange)="onCompanyChange($event.value)">
+      <mat-option *ngFor="let c of companyOptions" [value]="c.companyId">
+        {{ c.label }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>
 <mat-card class="user-access-section">
-    <mat-card-title class="user-access-title">ユーザー管理</mat-card-title>
-    <mat-card-content class="user-access-table-section">
-      <table mat-table [dataSource]="[]" class="user-access-table mat-elevation-z1">
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef class="header email">メールアドレス</th>
-          <td mat-cell *matCellDef="let row" class="cell email">-</td>
-        </ng-container>
-        <ng-container matColumnDef="role">
-          <th mat-header-cell *matHeaderCellDef class="header role">ロール</th>
-          <td mat-cell *matCellDef="let row" class="cell role">-</td>
-        </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef class="header status">状態</th>
-          <td mat-cell *matCellDef="let row" class="cell status">-</td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef class="header actions">操作</th>
-          <td mat-cell *matCellDef="let row" class="cell actions">
-            <button mat-button class="btn reset">初期化</button>
-            <button mat-button color="warn" class="btn deactivate">無効化</button>
-          </td>
-        </ng-container>
-  
-        <tr mat-header-row *matHeaderRowDef="['email', 'role', 'status', 'actions']"></tr>
-        <tr mat-row *matRowDef="let row; columns: ['email', 'role', 'status', 'actions'];"></tr>
-      </table>
-    </mat-card-content>
-  </mat-card>
-  
+  <mat-card-title class="user-access-title">ユーザー管理</mat-card-title>
+  <mat-card-content class="user-access-table-section">
+    <table mat-table [dataSource]="dataSource" class="user-access-table mat-elevation-z1">
+      
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef class="header email">メールアドレス</th>
+        <td mat-cell *matCellDef="let row" class="cell email">{{ row.email }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="role">
+        <th mat-header-cell *matHeaderCellDef class="header role">ロール</th>
+        <td mat-cell *matCellDef="let row" class="cell role">{{ row.role }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef class="header status">状態</th>
+        <td mat-cell *matCellDef="let row" class="cell status">
+          {{ row.status ?? 'active' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="header actions">操作</th>
+        <td mat-cell *matCellDef="let row" class="cell actions">
+          <button mat-button class="btn reset" (click)="sendReset(row.uid)">初期化</button>
+          <button mat-button color="warn" class="btn deactivate" (click)="deactivateUser(row)">無効化</button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+  </mat-card-content>
+</mat-card>

@@ -149,7 +149,8 @@ export class IncomeFormComponent implements OnInit {
       inKindIncome: value.inKindIncome ?? [],
       totalMonthlyIncome: this.calculateTotalMonthlyIncome(),
       estimatedAnnualIncome: this.calculateEstimatedAnnualIncome(),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      workingDays: value.workingDays ?? null
     };
 
     try {

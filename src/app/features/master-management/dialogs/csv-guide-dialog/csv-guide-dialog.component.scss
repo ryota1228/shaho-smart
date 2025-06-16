@@ -1,0 +1,28 @@
+.guide-table {
+    width: 100%;
+    table-layout: fixed;
+  
+    th.mat-header-cell,
+    td.mat-cell {
+      padding: 8px 12px;
+      white-space: nowrap;
+      vertical-align: top;
+    }
+  
+    .mat-column-field {
+      width: 15%;
+    }
+  
+    .mat-column-type {
+      width: 15%;
+    }
+  
+    .mat-column-format {
+      width: 30%;
+    }
+  
+    .mat-column-note {
+      width: 40%;
+    }
+  }
+  

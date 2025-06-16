@@ -14,19 +14,19 @@ export interface InKindIncome {
 export interface IncomeRecord {
   applicableMonth: string;
   baseAmount: number;
-
   absenceDays?: number;
   workDays?: number;
   workingHoursPerDay?: number;
-
-  salaryType?: SalaryType;
   overtimeAmount?: number;
-
-  allowances?: Allowance[];
-  inKindIncome?: InKindIncome[];
+  allowances?: {
+    name: string;
+    amount: number;
+    isFixed?: boolean;
+  }[];
+  inKindIncome?: { name: string; amount: number; taxable: boolean }[];
 
   totalMonthlyIncome: number;
   estimatedAnnualIncome?: number;
-
   createdAt?: string;
 }
+

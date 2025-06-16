@@ -32,6 +32,20 @@ mat-tab-group {
 mat-tab-body {
   overflow: visible !important;
 }
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-field {
+  flex: 1;
+}
 
 
   

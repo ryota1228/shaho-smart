@@ -1,11 +1,74 @@
 <h3 class="dependent-subtitle">登録済み扶養者</h3>
-<mat-list *ngIf="dependents.length > 0" class="dependent-list">
-  <mat-list-item *ngFor="let dep of dependents; let i = index" (click)="editDependent(i)">
-    <mat-icon matListIcon>person</mat-icon>
-    <h4 matLine>{{ dep.name }}（{{ dep.relation }}）</h4>
-    <p matLine>{{ dep.birthday | date }}・{{ dep.livesTogether ? '同居' : '別居' }}・{{ dep.income }}万円</p>
-  </mat-list-item>
-</mat-list>
+
+<table class="dependent-table mat-elevation-z1" *ngIf="dependents.length > 0">
+  <thead>
+    <tr>
+      <th>氏名・続柄・情報</th>
+      <th class="dependent-header-actions">操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let dep of dependents; let i = index">
+      <tr>
+        <td>
+          <div class="dependent-name">{{ dep.name }}（{{ dep.relation }}）</div>
+          <div class="dependent-meta">
+            {{ dep.birthday | date: 'yyyy年MM月dd日' }}・{{ dep.livesTogether ? '同居' : '別居' }}・{{ dep.income }}万円
+          </div>
+        </td>
+
+        <td class="dependent-actions">
+          <button mat-icon-button color="warn" (click)="removeDependent(i)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </tr>
+
+      <tr *ngIf="editIndex === i">
+        <td colspan="2">
+          <form #editForm="ngForm" (ngSubmit)="saveEditedDependent(i)">
+            <div class="dependent-form edit-inline">
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>氏名</mat-label>
+                <input matInput [(ngModel)]="dependents[i].name" name="editName{{i}}" required>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>続柄</mat-label>
+                <mat-select [(ngModel)]="dependents[i].relation" name="editRelation{{i}}" required>
+                  <mat-option value="配偶者">配偶者</mat-option>
+                  <mat-option value="子">子</mat-option>
+                  <mat-option value="親">親</mat-option>
+                  <mat-option value="その他">その他</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>生年月日</mat-label>
+                <input matInput type="date" [(ngModel)]="dependents[i].birthday" name="editBirthday{{i}}" required>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>年間収入（万円）</mat-label>
+                <input matInput type="number" [(ngModel)]="dependents[i].income" name="editIncome{{i}}" min="0">
+              </mat-form-field>
+
+              <mat-checkbox [(ngModel)]="dependents[i].livesTogether" name="editTogether{{i}}">
+                同居している
+              </mat-checkbox>
+
+              <div class="form-actions">
+                <button mat-button color="primary" type="submit">更新</button>
+                <button mat-button type="button" (click)="editIndex = -1">キャンセル</button>
+              </div>
+            </div>
+          </form>
+        </td>
+      </tr>
+    </ng-container>
+  </tbody>
+</table>
+
 <p *ngIf="dependents.length === 0" class="no-data-msg">現在、扶養者は登録されていません。</p>
 
 <mat-divider class="dependent-divider">扶養者の追加</mat-divider>
@@ -16,9 +79,7 @@
       <mat-panel-title>新しい扶養者を追加</mat-panel-title>
     </mat-expansion-panel-header>
 
-    <!-- バリデーション用フォーム -->
-    <form #dependentForm="ngForm" class="dependent-form" aria-label="新規扶養者入力フォーム" (ngSubmit)="addDependent(dependentForm)" novalidate>
-      
+    <form #dependentForm="ngForm" class="dependent-form" (ngSubmit)="addDependent(dependentForm)" novalidate>
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>氏名</mat-label>
         <input matInput [(ngModel)]="newDependent.name" name="name" required minlength="2">
@@ -48,14 +109,7 @@
 
       <mat-form-field appearance="outline" class="form-field">
         <mat-label>年間収入（万円）</mat-label>
-        <input
-          matInput
-          type="number"
-          [(ngModel)]="newDependent.income"
-          name="income"
-          required
-          min="0"
-        >
+        <input matInput type="number" [(ngModel)]="newDependent.income" name="income" required min="0">
         <mat-error *ngIf="dependentForm.submitted && (newDependent.income === null || newDependent.income < 0)">
           収入は0万円以上で入力してください
         </mat-error>

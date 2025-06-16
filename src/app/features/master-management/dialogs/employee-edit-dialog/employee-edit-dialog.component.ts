@@ -72,6 +72,8 @@ export class EmployeeEditDialogComponent implements OnInit, AfterViewInit {
       studentStatus: '',
       note: '',
       expectedDuration: '',
+      excludedBySocialAgreement: false,
+      isDependentInsured: false,
     };
     this.isEdit = !!data?.employee;
     this.companyId = data?.companyId;
@@ -121,6 +123,8 @@ export class EmployeeEditDialogComponent implements OnInit, AfterViewInit {
       totalBonusAmount: 0,
       bonusDetails: []
     };
+
+    console.log('[DEBUG] 保存時 employee:', this.employee);
   
     this.dialogRef.close({
       ...this.employee,
@@ -129,7 +133,6 @@ export class EmployeeEditDialogComponent implements OnInit, AfterViewInit {
       dependents: this.dependents
     });
   }
-  
 
   onBonusChange(updated: any[]): void {
     const bonusCount = updated.length;
@@ -161,4 +164,5 @@ checkForWarnings(): string[] {
 
     return warnings;
   }
+
 }

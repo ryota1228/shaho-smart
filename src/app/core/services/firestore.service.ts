@@ -1,13 +1,16 @@
 import { Injectable } from '@angular/core';
-import {Firestore, collection, collectionData, doc, setDoc, addDoc, getDocs, CollectionReference, DocumentReference, query, where, updateDoc, deleteDoc, Query, DocumentData, getDoc, Timestamp, orderBy, limit, collectionGroup} from '@angular/fire/firestore';
-import { Observable, from, map } from 'rxjs';
+import {Firestore, collection, collectionData, doc, setDoc, addDoc, getDocs, CollectionReference, DocumentReference, query, where, updateDoc, deleteDoc, Query, DocumentData, getDoc, Timestamp, orderBy, limit, collectionGroup, documentId} from '@angular/fire/firestore';
+import { Observable, from, map, of, switchMap, tap } from 'rxjs';
 import { Company, NewCompany } from '../models/company.model';
-import { Employee } from '../models/employee.model';
+import { BonusRecord, Employee } from '../models/employee.model';
 import { Dependent } from '../models/dependent.model';
 import { EmployeeInsurancePremiums, InsurancePremiumRecord, InsurancePremiumSnapshot, PremiumDetail } from '../models/insurance-premium.model';
 import { BonusPremiumRecord } from '../models/bonus-premium.model';
 import { SubmissionRecord, SubmissionType } from '../models/submission-record.model';
 import { ActualPremiumRecord, ActualPremiumMethod, ActualPremiumEntry } from '../models/actual-premium.model';
+import { IncomeRecord } from '../models/income-record.model';
+import { format, subMonths } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 
 export function cleanData(obj: Record<string, any>): Record<string, any> {
   return Object.fromEntries(
@@ -18,6 +21,25 @@ export function cleanData(obj: Record<string, any>): Record<string, any> {
 @Injectable({ providedIn: 'root' })
 export class FirestoreService {
   constructor(private firestore: Firestore) {}
+
+  async saveBonusPremiumRecord(
+    companyId: string,
+    empNo: string,
+    applicableMonth: string,
+    record: BonusPremiumRecord
+  ): Promise<void> {
+    try {
+      const bonusId = record.bonusId;
+      const docRef = doc(
+        this.firestore,
+        `companies/${companyId}/employees/${empNo}/bonusPremiums/${bonusId}`
+      );
+      await setDoc(docRef, record, { merge: true });
+    } catch (error) {
+      console.error('❌ Failed to save bonus premium record:', error);
+      throw new Error('賞与保険料の保存に失敗しました');
+    }
+  }
 
   createEmptyCompany(currentUid: string): Promise<string> {
     const companiesRef = collection(this.firestore, 'companies');
@@ -30,47 +52,62 @@ export class FirestoreService {
       healthType: '',
       insurerNumber: '',
       branchLink: '',
-      authorizedUsers: [currentUid],
-      isDeleted: false
+      isDeleted: false,
+      voluntaryHealthApplicable: false,
+      voluntaryPensionApplicable: false
     };
   
     return addDoc(companiesRef, newCompany).then(docRef => docRef.id);
   }
-
-  getCompanyListByUser(uid: string): Observable<Company[]> {
-    const companiesRef = collection(this.firestore, 'companies');
-    const q = query(
-      companiesRef,
-      where('authorizedUsers', 'array-contains', uid),
-      where('isDeleted', '==', false)
-    );
   
-    return new Observable<Company[]>(observer => {
-      getDocs(q).then(snapshot => {
-        const companies: Company[] = snapshot.docs.map(doc => ({
-          companyId: doc.id,
-          ...doc.data()
-        } as Company));
-        observer.next(companies);
-        observer.complete();
-      }).catch(error => observer.error(error));
-    });
+  getCompanyListByUser(uid: string): Observable<Company[]> {
+    const userCompanyRef = collection(this.firestore, `users/${uid}/userCompanies`);
+    
+    return from(getDocs(userCompanyRef)).pipe(
+      map(snapshot => snapshot.docs.map(doc => doc.id)),
+      switchMap((ids: string[]) => {
+        if (ids.length === 0) return of([]);
+        const companyDocs = ids.map(id => getDoc(doc(this.firestore, `companies/${id}`)));
+        return from(Promise.all(companyDocs)).pipe(
+          map(snapshots => {
+            const allCompanies = snapshots
+              .filter(s => s.exists())
+              .map(s => {
+                const data = s.data();
+                console.log('🧩 company raw:', s.id, data);
+                return {
+                  companyId: s.id,
+                  ...data
+                } as Company;
+              });
+    
+            console.log('✅ All company data:', allCompanies);
+    
+            return allCompanies.filter(c => !c.isDeleted);
+          })
+        );
+      })
+    );
   }
+  
 
   softDeleteCompany(companyId: string): Promise<void> {
     const ref = doc(this.firestore, 'companies', companyId);
     return updateDoc(ref, { isDeleted: true });
   }
-
+  
   getEmployeesForCompany(companyId: string): Observable<Employee[]> {
     const col = collection(this.firestore, `companies/${companyId}/employees`);
     const q = query(col, where('isDeleted', '==', false));
   
     return from(getDocs(q)).pipe(
-      map(snapshot =>
-        snapshot.docs.map(doc => {
+      switchMap(async (snapshot) => {
+        const employees: Employee[] = [];
+  
+        for (const doc of snapshot.docs) {
           const data = doc.data();
-          return {
+  
+          const emp: Employee = {
             empNo: data['empNo'] ?? '',
             lastName: data['lastName'] ?? '',
             firstName: data['firstName'] ?? '',
@@ -92,12 +129,29 @@ export class FirestoreService {
             careInsuranceStatus: data['careInsuranceStatus'] ?? '',
             careInsuranceReason: data['careInsuranceReason'] ?? '',
             note: data['note'] ?? '',
-          } as Employee;
-        })
-      )
-    );
-  }
+            bonusMergedIntoMonthly: data['bonusMergedIntoMonthly'] ?? false,
+            bonusSummary: data['bonusSummary'] ?? undefined,
+            bonusRecords: [],
+            firebaseUid: data['firebaseUid'],
+            excludedBySocialAgreement: data['excludedBySocialAgreement'] ?? false,
+            isDependentInsured: data['isDependentInsured'] ?? false
+          };
   
+          const bonusCol = collection(this.firestore, `companies/${companyId}/employees/${emp.empNo}/bonusRecords`);
+          const bonusSnap = await getDocs(bonusCol);
+          emp.bonusRecords = bonusSnap.docs.map(b => ({
+            ...(b.data() as BonusRecord),
+            bonusId: b.id,
+          }));
+  
+          employees.push(emp);
+        }
+  
+        return employees;
+      }),
+      switchMap((employees: Employee[]) => of(employees))
+    );
+  }  
 
   async saveCompanyWithEmployees(companyId: string | null, company: any, employees: any[]): Promise<string> {
     const companiesCol = collection(this.firestore, 'companies');
@@ -134,20 +188,33 @@ export class FirestoreService {
     return { company: companyData, employees };
   }
 
-  saveEmployee(companyId: string, employee: Employee): Promise<void> {
-    const empId = (employee.empNo || '').trim();
+  async saveEmployee(companyId: string, employee: Employee, originalEmpNo?: string): Promise<void> {
+    const newEmpId = employee.empNo?.trim();
+    const oldEmpId = originalEmpNo?.trim();
   
-    if (!empId) {
+    if (!newEmpId) {
       return Promise.reject(new Error('empNo が未入力のため、従業員情報を保存できません'));
     }
   
-    const ref = doc(this.firestore, `companies/${companyId}/employees/${empId}`);
+    const newDocRef = doc(this.firestore, `companies/${companyId}/employees/${newEmpId}`);
   
-    return setDoc(ref, cleanData({
+    await setDoc(newDocRef, cleanData({
       ...employee,
-      isDeleted: false
-    }), { merge: true });
+      empNo: newEmpId,
+      isDeleted: false,
+      firebaseUid: employee.firebaseUid ?? null,
+
+      excludedBySocialAgreement: employee.excludedBySocialAgreement ?? false,
+      isDependentInsured: employee.isDependentInsured ?? false
+    }), { merge: false });
+    
+  
+    if (oldEmpId && oldEmpId !== newEmpId) {
+      const oldDocRef = doc(this.firestore, `companies/${companyId}/employees/${oldEmpId}`);
+      await deleteDoc(oldDocRef);
+    }
   }  
+  
 
   async updateCompanyEmployeeCount(companyId: string, count: number): Promise<void> {
     const companyRef = doc(this.firestore, `companies/${companyId}`);
@@ -173,21 +240,35 @@ export class FirestoreService {
       ? doc(this.firestore, 'companies', companyId)
       : doc(companiesCol);
   
-      return setDoc(companyDocRef, cleanData(company)).then(() => companyDocRef.id);
+    const payload = {
+      ...company,
+      voluntaryHealthApplicable: company.voluntaryHealthApplicable ?? false,
+      voluntaryPensionApplicable: company.voluntaryPensionApplicable ?? false,
+      standardWeeklyHours: company.standardWeeklyHours ?? 40
+    };
+  
+    return setDoc(companyDocRef, cleanData(payload)).then(() => companyDocRef.id);
   }
+  
 
   async saveDependent(companyId: string, empNo: string, dependent: any): Promise<void> {
     const empRef = doc(this.firestore, `companies/${companyId}/employees/${empNo}`);
     const depId = `${dependent.name}_${dependent.birthday}`;
     const ref = doc(collection(empRef, 'dependents'), depId);
-    
+  
+    const birthdayDate = dependent.birthday
+      ? (dependent.birthday instanceof Date
+          ? dependent.birthday
+          : new Date(dependent.birthday))
+      : null;
+  
     return setDoc(ref, {
       ...cleanData({
         ...dependent,
-        birthday: dependent.birthday ? Timestamp.fromDate(dependent.birthday) : null
+        birthday: birthdayDate ? Timestamp.fromDate(birthdayDate) : null
       }),
       createdAt: Timestamp.now()
-    }, { merge: true });    
+    }, { merge: true });
   }  
 
   async saveIncomeRecord(companyId: string, empNo: string, yearMonth: string, data: any): Promise<void> {
@@ -227,10 +308,10 @@ export class FirestoreService {
     }, { merge: true });
   }
   
-  async deleteBonusRecord(companyId: string, empNo: string, applicableMonth: string): Promise<void> {
-    const ref = doc(this.firestore, `companies/${companyId}/employees/${empNo}/bonusRecords/${applicableMonth}`);
+  async deleteBonusRecord(companyId: string, empNo: string, bonusId: string): Promise<void> {
+    const ref = doc(this.firestore, `companies/${companyId}/employees/${empNo}/bonusRecords/${bonusId}`);
     return deleteDoc(ref);
-  }
+  }  
 
   async getBonusRecords(companyId: string, empNo: string): Promise<any[]> {
     const col = collection(this.firestore, `companies/${companyId}/employees/${empNo}/bonusRecords`);
@@ -247,15 +328,31 @@ export class FirestoreService {
     const depCol = collection(empRef, 'dependents');
     const snap = await getDocs(depCol);
   
-    return snap.docs.map(doc => doc.data() as Dependent);
-  }
+    return snap.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        birthday: data['birthday']?.toDate?.() ?? null
+      } as Dependent;
+    });
+  }  
 
   async getCompany(companyId: string): Promise<Company | null> {
     const ref = doc(this.firestore, 'companies', companyId);
     const snap = await getDoc(ref);
     if (!snap.exists()) return null;
-    return { companyId: snap.id, ...snap.data() } as Company;
+  
+    const data = snap.data();
+  
+    return {
+      companyId: snap.id,
+      ...data,
+      voluntaryHealthApplicable: data['voluntaryHealthApplicable'] ?? false,
+      voluntaryPensionApplicable: data['voluntaryPensionApplicable'] ?? false,
+      standardWeeklyHours: data['standardWeeklyHours'] ?? 40
+    } as Company;
   }
+  
   
   async getEmployee(companyId: string, empNo: string): Promise<Employee | null> {
     const ref = doc(this.firestore, `companies/${companyId}/employees/${empNo}`);
@@ -331,18 +428,23 @@ export class FirestoreService {
   
     const batch = dependents.map(dep => {
       const id = `${dep.name}_${dep.birthday}`;
+  
+      const birthdayDate = dep.birthday
+        ? (dep.birthday instanceof Date ? dep.birthday : new Date(dep.birthday))
+        : null;
+  
       const ref = doc(depCol, id);
       return setDoc(ref, {
         ...cleanData({
           ...dep,
-          birthday: dep.birthday ? Timestamp.fromDate(dep.birthday) : null
+          birthday: birthdayDate ? Timestamp.fromDate(birthdayDate) : null
         }),
         createdAt: Timestamp.now()
       }, { merge: true });
-    });    
+    });
   
     await Promise.all(batch);
-  }
+  }  
 
   async saveBonusRecords(companyId: string, empNo: string, bonusDetails: any[]): Promise<void> {
     const empRef = doc(this.firestore, `companies/${companyId}/employees/${empNo}`);
@@ -379,8 +481,11 @@ export class FirestoreService {
   async getBonusPremiumRecords(companyId: string, empNo: string): Promise<BonusPremiumRecord[]> {
     const col = collection(this.firestore, `companies/${companyId}/employees/${empNo}/bonusPremiums`);
     const snap = await getDocs(col);
-    return snap.docs.map(doc => doc.data() as BonusPremiumRecord);
-  }
+    return snap.docs.map(doc => {
+      const data = doc.data() as Omit<BonusPremiumRecord, 'bonusId'>;
+      return { bonusId: doc.id, ...data };
+    });
+  }  
 
   async saveInsurancePremiumIfValid(
     companyId: string,
@@ -444,8 +549,7 @@ export class FirestoreService {
     };
   
     await setDoc(docRef, updateData, { merge: true });
-  
-    // （任意）削除ログの保存
+
     const logRef = collection(
       this.firestore,
       `companies/${companyId}/employees/${empNo}/insurancePremiumLogs`
@@ -463,7 +567,7 @@ export class FirestoreService {
   async saveSubmissionRecord(
     companyId: string,
     empNo: string,
-    month: string, // '2025-07'
+    month: string,
     type: SubmissionType,
     createdBy: string,
     data: any
@@ -499,7 +603,7 @@ export class FirestoreService {
     const docRef = doc(this.firestore, `companies/${companyId}/employees/${empNo}/actualPremiums/${month}`);
     const existingSnap = await getDoc(docRef);
   
-    if (existingSnap.exists()) {
+    if (existingSnap.exists() && method !== 'revised') {
       console.warn('⚠ actualPremiums はすでに存在しています。上書きは行いません。');
       return;
     }
@@ -510,14 +614,26 @@ export class FirestoreService {
       sourceSubmissionId: submissionId ?? '',
       decidedAt: Timestamp.now(),
       decidedBy: operatorUid,
+  
+      calculatedAt: snapshot.calculatedAt,
+      empNo,
+      companyId,
+      standardMonthlyAmount: snapshot.standardMonthlyAmount,
+  
+      healthGrade: snapshot.healthGrade,
+      pensionGrade: snapshot.pensionGrade,
+      careGrade: snapshot.careGrade,
+  
       health: toActualEntry(snapshot.health),
       pension: toActualEntry(snapshot.pension),
-      care: snapshot.care ? toActualEntry(snapshot.care) : null
+      care: snapshot.care ? toActualEntry(snapshot.care) : null,
+  
+      standardMonthlyAmountBreakdown: snapshot.standardMonthlyAmountBreakdown,
     };
   
-    await setDoc(docRef, actualRecord);
-    console.log('✅ actualPremiums 保存完了:', docRef.path);
-  }
+    await setDoc(docRef, actualRecord, { merge: false });
+    console.log(`✅ actualPremiums 保存完了: ${docRef.path}（method: ${method}）`);
+  }  
 
   async saveActualPremium(
     companyId: string,
@@ -579,7 +695,142 @@ export class FirestoreService {
       })
     );
   }
-        
+
+  async deleteDependent(companyId: string, empNo: string, depId: string): Promise<void> {
+    const ref = doc(this.firestore, `companies/${companyId}/employees/${empNo}/dependents/${depId}`);
+    await deleteDoc(ref);
+  }
+
+  async fetchThreeMonthsIncomeRecords(
+    companyId: string,
+    empNo: string,
+    targetMonth: string
+  ): Promise<IncomeRecord[]> {
+    const basePath = `companies/${companyId}/employees/${empNo}/incomeRecords`;
+    const baseDate = new Date(`${targetMonth}-01`);
+
+    const months = [
+      format(baseDate, 'yyyy-MM'),
+      format(subMonths(baseDate, 1), 'yyyy-MM'),
+      format(subMonths(baseDate, 2), 'yyyy-MM')
+    ];
+
+    const results: IncomeRecord[] = [];
+
+    for (const month of months) {
+      const ref = doc(this.firestore, basePath, month);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        results.push(snap.data() as IncomeRecord);
+      }
+    }
+
+    return results;
+  }
+
+  async getLatestActualPremiumRecord(
+    companyId: string,
+    empNo: string
+  ): Promise<ActualPremiumRecord | null> {
+    const colRef = collection(this.firestore, `companies/${companyId}/employees/${empNo}/actualPremiums`);
+    const q = query(colRef, orderBy('applicableMonth', 'desc'), limit(1));
+    const snap = await getDocs(q);
+  
+    return snap.empty ? null : (snap.docs[0].data() as ActualPremiumRecord);
+  }
+  
+  async createCompanyWithHr(uid: string, lastName: string, firstName: string): Promise<string> {
+    const companyId = uuidv4();
+    const employeeId = uuidv4();
+  
+    await setDoc(doc(this.firestore, `companies/${companyId}`), {
+      name: '（新規企業）',
+      createdAt: Timestamp.now(),
+      isDeleted: false,
+      voluntaryHealthApplicable: false,
+      voluntaryPensionApplicable: false,
+      standardWeeklyHours: 40,
+      totalEmployeeCount: 0
+    });
+  
+    await setDoc(doc(this.firestore, `users/${uid}/userCompanies/${companyId}`), {
+      employeeId,
+      role: 'hr',
+      status: 'active'
+    });
+  
+    await setDoc(doc(this.firestore, `companies/${companyId}/employees/${employeeId}`), {
+      empNo: employeeId,
+      lastName,
+      firstName,
+      dept: '人事',
+      joinDate: new Date().toISOString().slice(0, 10),
+      role: 'hr',
+      firebaseUid: uid,
+      createdByUid: uid,
+      isDeleted: false
+    });
+  
+    return companyId;
+  }
+
+  async saveUser(uid: string, userData: any): Promise<void> {
+    const ref = doc(this.firestore, `users/${uid}`);
+    return setDoc(ref, userData);
+  }
+  
+  async saveUserCompany(uid: string, companyId: string, data: { companyId: string; role: 'hr' | 'employee' }) {
+    const ref = doc(this.firestore, `users/${uid}/userCompanies/${companyId}`);
+    await setDoc(ref, {
+      companyId: data.companyId,
+      role: data.role,
+      createdAt: new Date().toISOString()
+    });
+  }
+  
+
+  async addUserCompanyLink(params: {
+    uid: string;
+    companyId: string;
+    role: 'hr' | 'employee';
+  }): Promise<void> {
+    const { uid, companyId, role } = params;
+    const ref = doc(this.firestore, `users/${uid}/userCompanies/${companyId}`);
+    await setDoc(ref, {
+      companyId,
+      role,
+    });
+  }
+
+  async migrateEmployeeData(companyId: string, oldEmpNo: string, newEmpNo: string): Promise<void> {
+    // income records
+    const incomeRecords = await this.getIncomeRecords(companyId, oldEmpNo);
+    for (const record of incomeRecords) {
+      await this.saveIncomeRecord(companyId, newEmpNo, record.applicableMonth, record);
+    }
+  
+    // bonus records
+    const bonusRecords = await this.getBonusRecords(companyId, oldEmpNo);
+    for (const record of bonusRecords) {
+      await this.saveBonusRecord(companyId, newEmpNo, record.applicableMonth, record);
+    }
+  
+    // dependents
+    const dependents = await this.getDependents(companyId, oldEmpNo);
+    await this.saveDependents(companyId, newEmpNo, dependents);
+  
+    // bonus premiums
+    const premiums = await this.getBonusPremiumRecords(companyId, oldEmpNo);
+    for (const p of premiums) {
+      await this.saveBonusPremium(companyId, newEmpNo, p.bonusId, { ...p, empNo: newEmpNo });
+    }
+  
+    // insurance premiums
+    const insurancePremiums = await this.getInsurancePremiumRecords(companyId, oldEmpNo);
+    for (const i of insurancePremiums) {
+      await this.saveInsurancePremium(companyId, newEmpNo, i.applicableMonth, { ...i, empNo: newEmpNo });
+    }
+  }  
 }
 
 function toActualEntry(source: PremiumDetail): ActualPremiumEntry {

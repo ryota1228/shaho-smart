@@ -23,8 +23,12 @@
     "@angular/router": "^17.3.0",
     "date-fns": "^4.1.0",
     "firebase": "^11.8.1",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
+    "pdfmake-wrapper": "^2.1.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "uuid": "^8.3.2",
     "zone.js": "~0.14.3"
   },
   "devDependencies": {
@@ -33,6 +37,7 @@
     "@angular/compiler-cli": "^17.3.0",
     "@types/jasmine": "~5.1.0",
     "@types/papaparse": "^5.3.16",
+    "@types/pdfmake": "^0.2.11",
     "@types/uuid": "^10.0.0",
     "jasmine-core": "~5.1.0",
     "karma": "~6.4.0",
@@ -41,6 +46,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "papaparse": "^5.5.3",
+    "pdfmake": "^0.2.20",
     "typescript": "~5.4.2"
   }
 }

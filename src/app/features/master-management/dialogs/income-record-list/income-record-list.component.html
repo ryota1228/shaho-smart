@@ -1,4 +1,9 @@
 <div class="income-record-list">
+
+  <div *ngIf="bonusMergedIntoMonthly" class="bonus-merged-alert">
+    賞与が標準報酬月額に按分されています（12等分）
+  </div>
+    
   <table mat-table [dataSource]="incomeRecords" class="mat-elevation-z2">
 
     <ng-container matColumnDef="month">
@@ -21,11 +26,6 @@
       <td mat-cell *matCellDef="let row">{{ getInKindIncomeTotal(row) | number }}</td>
     </ng-container>
 
-    <ng-container matColumnDef="bonus">
-      <th mat-header-cell *matHeaderCellDef>賞与</th>
-      <td mat-cell *matCellDef="let row">{{ row.bonus | number }}</td>
-    </ng-container>
-
     <ng-container matColumnDef="total">
       <th mat-header-cell *matHeaderCellDef>月額合計</th>
       <td mat-cell *matCellDef="let row">{{ row.totalMonthlyIncome | number }}</td>
@@ -43,8 +43,8 @@
       </td>
     </ng-container>
 
-    <tr mat-header-row *matHeaderRowDef="['month', 'base', 'allowanceTotal', 'inKind', 'bonus', 'total', 'actions']"></tr>
-    <tr mat-row *matRowDef="let row; columns: ['month', 'base', 'allowanceTotal', 'inKind', 'bonus', 'total', 'actions'];"></tr>
+    <tr mat-header-row *matHeaderRowDef="['month', 'base', 'allowanceTotal', 'inKind', 'total', 'actions']"></tr>
+    <tr mat-row *matRowDef="let row; columns: ['month', 'base', 'allowanceTotal', 'inKind', 'total', 'actions'];"></tr>
   </table>
 
   <div class="add-button">

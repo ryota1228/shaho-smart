@@ -15,7 +15,6 @@
             name="empNo"
             required
             #empNoCtrl="ngModel"
-            [readonly]="isEdit"
           >
           <mat-error *ngIf="empNoCtrl.invalid && empNoCtrl.touched">
             社員番号は必須です
@@ -47,6 +46,20 @@
             <mat-label>メイ</mat-label>
             <input matInput [(ngModel)]="employee.firstNameKana" name="firstNameKana" required #firstNameKanaCtrl="ngModel">
             <mat-error *ngIf="firstNameKanaCtrl.invalid && firstNameKanaCtrl.touched">名（カナ）は必須です</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div *ngIf="!isEdit" class="form-row">
+          <mat-form-field class="form-field">
+            <mat-label>メールアドレス</mat-label>
+            <input matInput [(ngModel)]="employee.email" name="email" required #emailCtrl="ngModel" type="email">
+            <mat-error *ngIf="emailCtrl.invalid && emailCtrl.touched">有効なメールアドレスを入力してください</mat-error>
+          </mat-form-field>
+        
+          <mat-form-field class="form-field">
+            <mat-label>仮パスワード</mat-label>
+            <input matInput [(ngModel)]="employee.password" name="password" required #passwordCtrl="ngModel" type="password" minlength="6">
+            <mat-error *ngIf="passwordCtrl.invalid && passwordCtrl.touched">6文字以上のパスワードを入力してください</mat-error>
           </mat-form-field>
         </div>
 
@@ -112,25 +125,6 @@
         </mat-form-field>
 
         <mat-form-field class="form-field">
-          <mat-label>性別</mat-label>
-          <mat-select [(ngModel)]="employee.gender" name="gender">
-            <mat-option value="male">男性</mat-option>
-            <mat-option value="female">女性</mat-option>
-            <mat-option value="other">その他</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field class="form-field">
-          <mat-label>国籍</mat-label>
-          <input matInput [(ngModel)]="employee.nationality" name="nationality" placeholder="例：日本">
-        </mat-form-field>
-        
-        <mat-form-field class="form-field">
-          <mat-label>在留資格</mat-label>
-          <input matInput [(ngModel)]="employee.residencyStatus" name="residencyStatus" placeholder="例：技術・人文知識・国際業務">
-        </mat-form-field>        
-
-        <mat-form-field class="form-field">
           <mat-label>学生区分</mat-label>
           <mat-select [(ngModel)]="employee.studentStatus" name="studentStatus" required #studentStatusCtrl="ngModel">
             <mat-option value="none">該当なし</mat-option>
@@ -140,6 +134,14 @@
           </mat-select>
           <mat-error *ngIf="studentStatusCtrl.invalid && studentStatusCtrl.touched">学生区分は必須です</mat-error>
         </mat-form-field>
+
+        <mat-checkbox [(ngModel)]="employee.excludedBySocialAgreement" name="excludedBySocialAgreement">
+          日本との社会保障協定により適用除外（健康保険・介護保険・厚生年金）
+        </mat-checkbox>
+
+        <mat-checkbox [(ngModel)]="employee.isDependentInsured" name="isDependentInsured">
+          本人が家族の扶養に入っている（健保・介保は原則対象外）
+        </mat-checkbox>
 
         <mat-form-field class="form-field">
           <mat-label>備考</mat-label>
@@ -153,6 +155,7 @@
       [companyId]="companyId"
       [empNo]="employee.empNo"
       [incomeRecords]="incomeRecords"
+      [bonusMergedIntoMonthly]="employee.bonusMergedIntoMonthly"
       (incomeRecordsChange)="incomeRecords = $event">
     </app-income-record-list>
     </mat-tab>
@@ -173,6 +176,57 @@
     </app-dependent-edit-dialog>
     </mat-tab>
 
+    <mat-tab label="減免情報">
+      <div class="form-section">
+    
+        <mat-checkbox [(ngModel)]="employee.hasExemption" name="hasExemption">
+          制度上の理由により減免対象となっている
+        </mat-checkbox>
+    
+        <div *ngIf="employee.hasExemption" class="form-group">
+    
+          <mat-form-field class="form-field" appearance="fill">
+            <mat-label>減免理由（複数選択可）</mat-label>
+            <mat-select multiple [(ngModel)]="employee.exemptionDetails.types" name="exemptionTypes">
+              <mat-option value="育児休業">育児休業</mat-option>
+              <mat-option value="産前産後">産前産後</mat-option>
+              <mat-option value="障害者">障害者</mat-option>
+              <mat-option value="災害">災害</mat-option>
+              <mat-option value="任意継続軽減">任意継続軽減</mat-option>
+              <mat-option value="その他">その他</mat-option>
+            </mat-select>
+          </mat-form-field>
+    
+          <mat-form-field class="form-field" appearance="fill">
+            <mat-label>対象となる保険（複数選択可）</mat-label>
+            <mat-select multiple [(ngModel)]="employee.exemptionDetails.targetInsurances" name="targetInsurances">
+              <mat-option value="health">健康保険</mat-option>
+              <mat-option value="care">介護保険</mat-option>
+              <mat-option value="pension">厚生年金</mat-option>
+            </mat-select>
+          </mat-form-field>
+    
+          <div class="form-row">
+            <mat-form-field class="form-field">
+              <mat-label>減免開始月</mat-label>
+              <input matInput [(ngModel)]="employee.exemptionDetails.startMonth" name="exemptionStartMonth" placeholder="2025-01">
+            </mat-form-field>
+    
+            <mat-form-field class="form-field">
+              <mat-label>減免終了月</mat-label>
+              <input matInput [(ngModel)]="employee.exemptionDetails.endMonth" name="exemptionEndMonth" placeholder="2025-06">
+            </mat-form-field>
+          </div>
+    
+          <mat-form-field class="form-field">
+            <mat-label>備考</mat-label>
+            <textarea matInput rows="2" [(ngModel)]="employee.exemptionDetails.notes" name="exemptionNotes"></textarea>
+          </mat-form-field>
+    
+        </div>
+      </div>
+    </mat-tab>    
+
   </mat-tab-group>
 </mat-dialog-content>
 
@@ -180,3 +234,4 @@
   <button mat-stroked-button mat-dialog-close>キャンセル</button>
   <button mat-flat-button color="primary" (click)="save(form)">保存</button>
 </mat-dialog-actions>
+

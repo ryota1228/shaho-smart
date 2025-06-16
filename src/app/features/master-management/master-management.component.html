@@ -17,10 +17,21 @@
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef class="col-company-actions">操作</th>
         <td mat-cell *matCellDef="let company" class="col-company-actions">
-          <button mat-icon-button (click)="selectCompany(company)">
+          <button
+            mat-icon-button
+            (click)="selectCompany(company)"
+            [disabled]="userCompanyRoles[company.companyId] !== 'hr'"
+            [matTooltip]="userCompanyRoles[company.companyId] === 'hr' ? '編集' : '権限がありません'"
+          >
             <mat-icon>edit</mat-icon>
           </button>
-          <button mat-icon-button color="warn" (click)="confirmDeleteCompany(company)">
+          <button
+            mat-icon-button
+            color="warn"
+            (click)="confirmDeleteCompany(company)"
+            [disabled]="userCompanyRoles[company.companyId] !== 'hr'"
+            [matTooltip]="userCompanyRoles[company.companyId] === 'hr' ? '削除' : '権限がありません'"
+          >
             <mat-icon>delete</mat-icon>
           </button>
         </td>
@@ -30,6 +41,7 @@
     </table>
   </mat-card-content>
 </mat-card>
+
 
 <mat-divider class="section-divider"></mat-divider>
 
@@ -53,14 +65,14 @@
           <input matInput [(ngModel)]="companyInfo.postalCode" name="postalCode" (blur)="formatPostalCode()" placeholder="例：100-0001" maxlength="8">
         </mat-form-field>
         
-        <!-- 都道府県（必須） -->
         <mat-form-field appearance="outline" class="form-field short">
           <mat-label>都道府県</mat-label>
           <mat-select [(ngModel)]="companyInfo.prefecture" name="prefecture" required>
             <mat-option *ngFor="let pref of prefectures" [value]="pref">{{ pref }}</mat-option>
           </mat-select>
+          <mat-error *ngIf="!companyInfo.prefecture">都道府県を入力してください</mat-error>
         </mat-form-field>
-        <!-- 住所（都道府県以下） -->
+
         <mat-form-field appearance="outline" class="form-field full">
           <mat-label>市区町村・番地</mat-label>
           <input matInput [(ngModel)]="companyInfo.address" name="addressDetail">
@@ -68,11 +80,21 @@
 
         <mat-form-field appearance="outline" class="form-field short">
           <mat-label>電話番号</mat-label>
-          <input matInput [(ngModel)]="companyInfo.phone" name="phone" inputmode="tel" placeholder="例：03-1234-5678" pattern="^0\\d{1,4}-\\d{1,4}-\\d{3,4}$" #telRef="ngModel" [class.invalid]="telRef.invalid && telRef.touched">
+          <input matInput
+            [(ngModel)]="companyInfo.phone"
+            name="phone"
+            inputmode="tel"
+            maxlength="13"
+            placeholder="例：03-1234-5678"
+            pattern="^0\d{1,4}-\d{1,4}-\d{3,4}$"
+            #telRef="ngModel"
+            [class.invalid]="telRef.invalid && telRef.touched"
+          >
           <mat-error *ngIf="telRef.invalid && telRef.touched">
             電話番号の形式が正しくありません（例：03-1234-5678）
           </mat-error>
         </mat-form-field>
+        
       </div>
 
       <div class="form-section insurance-section">
@@ -80,38 +102,43 @@
         <div class="form-row">
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>健保種別</mat-label>
-            <mat-select [(ngModel)]="companyInfo.healthType" name="healthType">
+            <mat-select [(ngModel)]="companyInfo.healthType" name="healthType" required>
               <mat-option value="協会けんぽ">協会けんぽ</mat-option>
               <mat-option value="組合健保">組合健保</mat-option>
             </mat-select>
+            <mat-error *ngIf="!companyInfo.healthType">健保種別を入力してください</mat-error>
           </mat-form-field>
+          
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>保険者番号</mat-label>
             <input matInput [(ngModel)]="companyInfo.insurerNumber" name="insurerNumber">
           </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field short">
+            <mat-label>フルタイム基準時間（週）</mat-label>
+            <input matInput type="number" [(ngModel)]="companyInfo.standardWeeklyHours" name="standardWeeklyHours" required min="10" max="60" placeholder="例：40">
+            <mat-error *ngIf="!companyInfo.standardWeeklyHours">基準時間を入力してください</mat-error>
+          </mat-form-field>
         </div>
-        <div class="custom-rate-wrapper" [class.hidden]="companyInfo.healthType !== '組合健保'">
-          <button mat-flat-button color="accent" (click)="openCustomRatesDialog()" class="rate-button">
-            <mat-icon>edit</mat-icon>
-            組合健保の保険料率を設定
-          </button>
-          <div *ngIf="companyInfo.customRates" class="chip-row">
-            <mat-chip color="primary" selected>
-              健保：{{ companyInfo.customRates.health?.employee }}% / {{ companyInfo.customRates.health?.employer }}%
-            </mat-chip>
-            <mat-chip color="primary" selected>
-              介護：{{ companyInfo.customRates.care?.employee }}% / {{ companyInfo.customRates.care?.employer }}%
-            </mat-chip>
-          </div>
-        </div>
-        <div class="checkbox-row">
-          <mat-checkbox [(ngModel)]="companyInfo.isApplicableToHealthInsurance" name="isApplicableToHealthInsurance">
-            健康保険の適用事業所である（任意含む）
+
+        <div class="checkbox-row tight-checkbox-row">
+          <mat-checkbox
+            [(ngModel)]="companyInfo.voluntaryHealthApplicable"
+            name="voluntaryHealthApplicable"
+            [disabled]="isForcedApplicableToHealth"
+          >
+            任意適用（健康保険）
           </mat-checkbox>
-          <mat-checkbox [(ngModel)]="companyInfo.isApplicableToPension" name="isApplicableToPension">
-            厚生年金の適用事業所である（任意含む）
+        
+          <mat-checkbox
+            [(ngModel)]="companyInfo.voluntaryPensionApplicable"
+            name="voluntaryPensionApplicable"
+            [disabled]="isForcedApplicableToPension"
+          >
+            任意適用（厚生年金保険）
           </mat-checkbox>
         </div>
+        
       </div>
 
       <div class="form-actions-fixed">
@@ -119,37 +146,58 @@
           <mat-label>従業員数（自動計算）</mat-label>
           <input matInput [value]="companyInfo.totalEmployeeCount ?? dataSource.length" readonly>
         </mat-form-field>
+
+        <div class="custom-rate-wrapper" [class.hidden]="companyInfo.healthType !== '組合健保'">
+          <button mat-flat-button color="accent" (click)="openCustomRatesDialog()" class="rate-button">
+            <mat-icon>edit</mat-icon>
+            組合健保の保険料率を設定
+          </button>
+        </div>
+
         <button mat-raised-button color="primary" (click)="saveCompanyData()">
           <mat-icon>save</mat-icon>
-          保存
+          保存（企業名/都道府県/保険種別/基準時間は必須です）
         </button>
       </div>
+
     </form>
   </mat-card-content>
 </mat-card>
 
 <mat-divider></mat-divider>
 
-<mat-card class="master-card employee-list" *ngIf="selectedCompanyId">
+<mat-card class="master-card employee-list" *ngIf="selectedCompanyId && isCompanyInfoValid()">
   <mat-card-header>
     <mat-card-title>従業員一覧</mat-card-title>
-
+  
     <div class="employee-header-actions">
 
       <button mat-stroked-button (click)="openCsvImportDialog()">
         <mat-icon class="csv-import-icon">folder_open</mat-icon>
-        CSVで従業員を一括登録
+        CSVで従業員追加＆アカウント作成（一括）
       </button>
-      
+  
+      <button mat-stroked-button (click)="downloadCsvTemplate()">
+        <mat-icon>download</mat-icon>
+        一括登録用テンプレート
+      </button>
+
+      <button mat-stroked-button (click)="openCsvGuideDialog()">
+        <mat-icon>help_outline</mat-icon>
+        一括登録ガイド
+      </button>
+  
       <button mat-flat-button color="primary" (click)="openNewEmployeeDialog()">
         <mat-icon>person_add</mat-icon>
-        従業員を追加
+        手動で従業員追加＆アカウント作成
       </button>
     </div>
+  
     <mat-card-subtitle>
       登録されている従業員情報の確認・編集ができます
     </mat-card-subtitle>
   </mat-card-header>
+  
 
   <div class="employee-search-container">
     <mat-form-field appearance="outline" class="employee-search-field">
@@ -165,25 +213,22 @@
 
   <mat-card-content>
     <table mat-table [dataSource]="dataSource" class="employee-table mat-elevation-z1">
-      <!-- 社員番号 -->
+
       <ng-container matColumnDef="empNo">
         <th mat-header-cell *matHeaderCellDef class="col-empno">社員番号</th>
         <td mat-cell *matCellDef="let row" class="col-empno">{{ row.empNo }}</td>
       </ng-container>
 
-      <!-- 氏名 -->
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef class="col-name">氏名</th>
         <td mat-cell *matCellDef="let row" class="col-name">{{ row.lastName }} {{ row.firstName }}</td>
       </ng-container>
 
-      <!-- 所属 -->
       <ng-container matColumnDef="dept">
         <th mat-header-cell *matHeaderCellDef class="col-dept">所属</th>
         <td mat-cell *matCellDef="let row" class="col-dept">{{ row.dept || '-' }}</td>
       </ng-container>
 
-      <!-- 標準報酬月額 -->
       <ng-container matColumnDef="monthly">
         <th mat-header-cell *matHeaderCellDef class="col-monthly">標準報酬月額（最新月）</th>
         <td mat-cell *matCellDef="let row" class="col-monthly">
@@ -191,7 +236,6 @@
         </td>
       </ng-container>
 
-      <!-- 健康保険 -->
       <ng-container matColumnDef="health">
         <th mat-header-cell *matHeaderCellDef class="col-health health-group-start">健康保険</th>
         <td mat-cell *matCellDef="let row" class="col-health health-group-start">
@@ -205,7 +249,6 @@
         </td>
       </ng-container>
 
-      <!-- 健保等級 -->
       <ng-container matColumnDef="healthGrade">
         <th mat-header-cell *matHeaderCellDef class="col-health-grade">健保等級（最新月）</th>
         <td mat-cell *matCellDef="let row" class="col-health-grade">
@@ -213,7 +256,6 @@
         </td>
       </ng-container>
 
-      <!-- 厚生年金 -->
       <ng-container matColumnDef="pension">
         <th mat-header-cell *matHeaderCellDef class="col-pension pension-group-start">厚生年金</th>
         <td mat-cell *matCellDef="let row" class="col-pension pension-group-start">
@@ -227,7 +269,6 @@
         </td>
       </ng-container>
 
-      <!-- 厚年等級 -->
       <ng-container matColumnDef="pensionGrade">
         <th mat-header-cell *matHeaderCellDef class="col-pension-grade">厚年等級（最新月）</th>
         <td mat-cell *matCellDef="let row" class="col-pension-grade">
@@ -235,7 +276,6 @@
         </td>
       </ng-container>
 
-      <!-- 介護保険 -->
       <ng-container matColumnDef="care">
         <th mat-header-cell *matHeaderCellDef class="col-care care-group-start">介護保険</th>
         <td mat-cell *matCellDef="let row" class="col-care care-group-start">
@@ -249,7 +289,6 @@
         </td>
       </ng-container>
 
-      <!-- 介護等級 -->
       <ng-container matColumnDef="careGrade">
         <th mat-header-cell *matHeaderCellDef class="col-care-grade">介護等級（最新月）</th>
         <td mat-cell *matCellDef="let row" class="col-care-grade">
@@ -257,7 +296,6 @@
         </td>
       </ng-container>
 
-      <!-- 操作 -->
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef class="col-actions">操作</th>
         <td mat-cell *matCellDef="let row" class="col-actions">
@@ -269,10 +307,21 @@
           </button>
         </td>
       </ng-container>
-
-      <!-- 行定義 -->
+      
+      <ng-container matColumnDef="roleToggle">
+        <th mat-header-cell *matHeaderCellDef>閲覧・編集権限</th>
+        <td mat-cell *matCellDef="let emp">
+          <mat-slide-toggle
+            [checked]="getUserRole(emp.firebaseUid) === 'hr'"
+            (change)="toggleUserRole(emp.firebaseUid, $event.checked)"
+            [disabled]="!canEditSelectedCompany"
+          ></mat-slide-toggle>
+        </td>
+      </ng-container>
+      
+      
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns" [class.incomplete]="isIncompleteEmployee(row)" [matTooltip]="isIncompleteEmployee(row) ? '未入力項目があります。従業員情報を入力してください。' : ''"></tr>
 
     </table>
   </mat-card-content>

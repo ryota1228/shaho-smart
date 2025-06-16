@@ -5,23 +5,24 @@
     <h3>健康保険</h3>
     <mat-form-field appearance="outline">
       <mat-label>本人負担（%）</mat-label>
-      <input matInput type="number" [(ngModel)]="customRates.health.employee" name="healthEmployee">
+      <input matInput type="number" [(ngModel)]="form.healthEmployee" name="healthEmployee">
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>会社負担（%）</mat-label>
-      <input matInput type="number" [(ngModel)]="customRates.health.employer" name="healthEmployer">
+      <input matInput type="number" [(ngModel)]="form.healthCompany" name="healthCompany">
     </mat-form-field>
 
     <h3>介護保険</h3>
     <mat-form-field appearance="outline">
       <mat-label>本人負担（%）</mat-label>
-      <input matInput type="number" [(ngModel)]="customRates.care.employee" name="careEmployee">
+      <input matInput type="number" [(ngModel)]="form.careEmployee" name="careEmployee">
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>会社負担（%）</mat-label>
-      <input matInput type="number" [(ngModel)]="customRates.care.employer" name="careEmployer">
+      <input matInput type="number" [(ngModel)]="form.careCompany" name="careCompany">
     </mat-form-field>
   </form>
+  
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">

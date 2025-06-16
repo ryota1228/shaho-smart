@@ -14,65 +14,105 @@ export function getAge(birthday: string): number {
   return age;
 }
 
+function isApplicableToSpecialOffice(company: Company, employees: Employee[]): boolean {
+  const threshold = (company.standardWeeklyHours ?? 40) * 0.75;
+  return employees.filter(emp => {
+    const age = getAge(emp.birthday);
+    const isDaytimeStudent = emp.studentStatus === 'daytime';
+    return age < 75 && emp.weeklyHours >= threshold && !isDaytimeStudent;
+  }).length >= 51;
+}
+
+function countApplicableEmployeesForSpecialOffice(
+  employees: Employee[],
+  company: Company
+): number {
+  const standard = company.standardWeeklyHours ?? 40;
+
+  return employees.filter(emp => {
+    const age = getAge(emp.birthday);
+    const isStudent = emp.studentStatus === 'daytime';
+    const isDurationOK = emp.expectedDuration !== 'within2Months';
+    const isWorkingEnough = emp.weeklyHours >= standard;
+    const isAgeOK = age >= 20 && age < 75;
+
+    return isWorkingEnough && isDurationOK && !isStudent && isAgeOK;
+  }).length;
+}
+
 export function evaluateInsuranceStatus(
   employee: Employee,
   company: Company,
-  latestIncome?: { totalMonthlyIncome?: number }
+  latestIncome?: { totalMonthlyIncome?: number },
+  allEmployees: Employee[] = []
 ): Partial<Employee> {
-
-  const health = evaluateHealthInsurance(employee, company, latestIncome);
-  const pension = evaluatePension(employee, company, latestIncome);
-
-  const care = evaluateCareInsurance({
-    ...employee,
-    ...health
-  });
-
-  return {
-    ...health,
-    ...pension,
-    ...care
-  };
+  const health = evaluateHealthInsurance(employee, company, latestIncome, allEmployees);
+  const pension = evaluatePension(employee, company, latestIncome, allEmployees);
+  const care = evaluateCareInsurance({ ...employee, ...health });
+  return { ...health, ...pension, ...care };
 }
 
-function evaluateHealthInsurance(employee: Employee, company: Company, latestIncome?: { totalMonthlyIncome?: number }): Partial<Employee> {
+function evaluateHealthInsurance(
+  employee: Employee,
+  company: Company,
+  latestIncome?: { totalMonthlyIncome?: number },
+  allEmployees: Employee[] = []
+): Partial<Employee> {
   console.log(`▶ 健康保険判定開始 for ${employee.empNo}`);
 
   const reasons: string[] = [];
-
   const age = getAge(employee.birthday);
-  console.log(`- 年齢: ${age}`);
+
+  // ✅ 追加: 社会保障協定で除外
+  if (employee.excludedBySocialAgreement) {
+    return {
+      healthInsuranceStatus: '対象外',
+      healthInsuranceReason: '社会保障協定による適用除外'
+    };
+  }
+
+  // ✅ 追加: 本人が扶養に入っている
+  if (employee.isDependentInsured) {
+    return {
+      healthInsuranceStatus: '対象外',
+      healthInsuranceReason: '本人が扶養に入っている'
+    };
+  }
 
   if (age >= 75) {
     reasons.push('75歳以上（後期高齢者医療制度へ移行）');
-    console.log(`▶ 判定結果: 対象外 (${reasons.join(' / ')})`);
     return {
       healthInsuranceStatus: '対象外',
       healthInsuranceReason: reasons.join('・')
     };
   }
 
-  const isApplicable = company.isApplicableToHealthInsurance ?? false;
+  const isApplicable =
+    company.isApplicableToHealthInsurance ||
+    company.voluntaryHealthApplicable;
+
   const employmentType = (employee.employmentType ?? '').trim();
   const isRegular = ['正社員', '契約社員', '嘱託社員'].includes(employmentType);
+  const fullTime = company.standardWeeklyHours ?? 40;
+  const isShort = employee.weeklyHours < fullTime * 0.75;
 
-  console.log(`- 適用事業所: ${isApplicable}`);
+  console.log(`- 年齢: ${age}`);
+  console.log(`- 適用事業所: ${company.isApplicableToHealthInsurance} / 任意適用: ${company.voluntaryHealthApplicable}`);
   console.log(`- 雇用区分: ${employmentType} / 常用雇用 = ${isRegular}`);
+  console.log(`- フルタイム基準: ${fullTime}h → 実勤務: ${employee.weeklyHours}h → isShort=${isShort}`);
 
   if (!isApplicable) {
-    reasons.push('適用事業所ではない');
+    reasons.push('適用外事業所');
   } else if (!isRegular) {
     const weeklyOK = employee.weeklyHours >= 20;
     const durationOK = employee.expectedDuration !== 'within2Months';
     const isDaytimeStudent = employee.studentStatus === 'daytime';
-    const isShort = employee.weeklyHours < 30;
-    const enoughPeople = (company.totalEmployeeCount ?? 0) >= 51;
+    const enoughPeople = company.isApplicableToHealthInsurance || isApplicableToSpecialOffice(company, allEmployees);
     const monthlyIncomeOK = (latestIncome?.totalMonthlyIncome ?? 0) >= 88000;
 
-    console.log(`- 週勤務時間: ${employee.weeklyHours} → OK=${weeklyOK}`);
     console.log(`- 雇用期間: ${employee.expectedDuration} → OK=${durationOK}`);
     console.log(`- 学生区分: ${employee.studentStatus} → isDaytimeStudent=${isDaytimeStudent}`);
-    console.log(`- 従業員数: ${company.totalEmployeeCount} → enoughPeople=${enoughPeople}`);
+    console.log(`- 特定適用対象人数満たす: ${enoughPeople}`);
 
     if (!weeklyOK) reasons.push('週20時間未満');
     if (!durationOK) reasons.push('雇用期間が2か月以内');
@@ -82,43 +122,58 @@ function evaluateHealthInsurance(employee: Employee, company: Company, latestInc
   }
 
   const status = reasons.length === 0 ? '加入' : '対象外';
-  console.log(`▶ 判定結果: ${status} ${reasons.length > 0 ? '(' + reasons.join(' / ') + ')' : ''}`);
-
   return {
     healthInsuranceStatus: status,
     healthInsuranceReason: reasons.join('・')
   };
 }
 
-
-function evaluatePension(employee: Employee, company: Company, latestIncome?: { totalMonthlyIncome?: number }): Partial<Employee> {
+function evaluatePension(
+  employee: Employee,
+  company: Company,
+  latestIncome?: { totalMonthlyIncome?: number },
+  allEmployees: Employee[] = []
+): Partial<Employee> {
   console.log(`▶ 厚生年金保険判定開始 for ${employee.empNo}`);
 
   const reasons: string[] = [];
-
-  const isApplicable = company.isApplicableToPension ?? false;
-  const employmentType = (employee.employmentType ?? '').trim();
-  const isRegular = ['正社員', '契約社員', '嘱託社員'].includes(employmentType);
   const age = getAge(employee.birthday);
 
-  console.log(`- 適用事業所: ${isApplicable}`);
-  console.log(`- 雇用区分: ${employmentType} → 常用雇用 = ${isRegular}`);
-  console.log(`- 年齢: ${age}`);
+  // ✅ 追加: 社会保障協定で除外
+  if (employee.excludedBySocialAgreement) {
+    return {
+      pensionStatus: '対象外',
+      pensionReason: '社会保障協定による適用除外'
+    };
+  }
+
+  if (age >= 70) reasons.push('70歳以上');
+
+  const isApplicable =
+    company.isApplicableToPension ||
+    company.voluntaryPensionApplicable;
+
+  const employmentType = (employee.employmentType ?? '').trim();
+  const isRegular = ['正社員', '契約社員', '嘱託社員'].includes(employmentType);
+  const fullTime = company.standardWeeklyHours ?? 40;
+  const isShort = employee.weeklyHours < fullTime * 0.75;
+
+  console.log(`- 適用事業所: ${company.isApplicableToPension} / 任意適用: ${company.voluntaryPensionApplicable}`);
+  console.log(`- 雇用区分: ${employmentType} / 常用雇用 = ${isRegular}`);
+  console.log(`- フルタイム基準: ${fullTime}h → 実勤務: ${employee.weeklyHours}h → isShort=${isShort}`);
 
   if (!isApplicable) {
-    reasons.push('適用事業所ではない');
+    reasons.push('適用外事業所');
   } else if (!isRegular) {
     const weeklyOK = employee.weeklyHours >= 20;
     const durationOK = employee.expectedDuration !== 'within2Months';
     const isDaytimeStudent = employee.studentStatus === 'daytime';
-    const isShort = employee.weeklyHours < 30;
-    const enoughPeople = (company.totalEmployeeCount ?? 0) >= 51;
+    const enoughPeople = company.isApplicableToPension || isApplicableToSpecialOffice(company, allEmployees);
     const monthlyIncomeOK = (latestIncome?.totalMonthlyIncome ?? 0) >= 88000;
 
-    console.log(`- 週勤務時間: ${employee.weeklyHours} → OK=${weeklyOK}`);
     console.log(`- 雇用期間: ${employee.expectedDuration} → OK=${durationOK}`);
     console.log(`- 学生区分: ${employee.studentStatus} → isDaytimeStudent=${isDaytimeStudent}`);
-    console.log(`- 従業員数: ${company.totalEmployeeCount} → enoughPeople=${enoughPeople}`);
+    console.log(`- 特定適用対象人数満たす: ${enoughPeople}`);
 
     if (!weeklyOK) reasons.push('週20時間未満');
     if (!durationOK) reasons.push('雇用期間が2か月以内');
@@ -127,11 +182,7 @@ function evaluatePension(employee: Employee, company: Company, latestIncome?: { 
     if (!monthlyIncomeOK) reasons.push('月収8.8万円未満');
   }
 
-  if (age >= 70) reasons.push('70歳以上');
-
   const status = reasons.length === 0 ? '加入' : '対象外';
-  console.log(`▶ 判定結果: ${status} ${reasons.length > 0 ? '(' + reasons.join(' / ') + ')' : ''}`);
-
   return {
     pensionStatus: status,
     pensionReason: reasons.join('・')
@@ -140,6 +191,22 @@ function evaluatePension(employee: Employee, company: Company, latestIncome?: { 
 
 function evaluateCareInsurance(employee: Employee): Partial<Employee> {
   const age = getAge(employee.birthday);
+
+  // ✅ 追加: 社会保障協定または扶養の場合は除外
+  if (employee.excludedBySocialAgreement) {
+    return {
+      careInsuranceStatus: '対象外',
+      careInsuranceReason: '社会保障協定による適用除外'
+    };
+  }
+
+  if (employee.isDependentInsured) {
+    return {
+      careInsuranceStatus: '対象外',
+      careInsuranceReason: '本人が扶養に入っている'
+    };
+  }
+
   const raw = employee.healthInsuranceStatus?.trim() ?? '';
   const isHealthJoined = raw === '加入';
 
@@ -162,13 +229,3 @@ function evaluateCareInsurance(employee: Employee): Partial<Employee> {
     };
   }
 }
-
-
-
-
-
-
-
-
-
-
