@@ -29,62 +29,81 @@
         </mat-form-field>
   
         <mat-slide-toggle
-          [(ngModel)]="devForceAllButtons"
-          color="warn"
-          (change)="onDevModeToggleChanged()"
-        >
-          開発モード：すべての操作ボタンを強制有効化
-        </mat-slide-toggle>
+        *ngIf="userRole === 'hr'"
+        [(ngModel)]="devForceAllButtons"
+        color="warn"
+        (change)="onDevModeToggleChanged()"
+      >
+        開発モード：すべての操作ボタンを強制有効化
+      </mat-slide-toggle>
       </div>
   
 
-      <div class="button-row">
-        <button
-          mat-raised-button
-          class="btn-csv"
-          (click)="exportMonthlyPremiums()"
-          [disabled]="!selectedMonth || displayEmployees.length === 0"
-        >
-          <mat-icon>download</mat-icon>
-          この月のCSVを出力
-        </button>
-      
-        <button
-          mat-raised-button
-          color="primary"
-          (click)="registerQualificationForAll()"
-          [disabled]="!selectedMonth || displayEmployees.length === 0"
-        >
-          資格取得（当月/一括）
+      <div class="button-row" *ngIf="userRole === 'hr'">
 
-        </button>
       
         <button
-          mat-raised-button
-          color="accent"
-          (click)="registerFixedForAll()"
-          [disabled]="!selectedMonth || displayEmployees.length === 0"
-        >
-          定時決定（該当者/一括）
-        </button>
+        mat-raised-button
+        color="primary"
+        (click)="registerQualificationForAll()"
+        [disabled]="!canRegisterQualificationForAnyEmployee()"
+      >
+        資格取得（当月/一括）
+      </button>
       
-        <button
-          mat-raised-button
-          color="warn"
-          (click)="registerRevisedForAll()"
-          [disabled]="!selectedMonth || displayEmployees.length === 0"
-        >
-          随時改定（当月/一括）
-        </button>
+      <button
+      mat-raised-button
+      color="accent"
+      (click)="registerFixedForAll()"
+      [disabled]="!selectedMonth || !canRegisterFixedForAnyEmployee"
+    >
+      定時決定（該当者/一括）
+    </button>
+    
       
-        <button
-          mat-raised-button
-          class="btn-bonus"
-          (click)="calculateAllBonusPremiums()"
-          [disabled]="!selectedMonth || allEmployees.length === 0"
-        >
-          賞与保険料を計算（当月/一括）
+    <button
+    mat-raised-button
+    color="warn"
+    (click)="registerRevisedForAll()"
+    [disabled]="!selectedMonth || !canRegisterRevisedForAnyEmployee"
+  >
+    随時改定（該当者/一括）
+  </button>
+
+        <button mat-raised-button color="accent" (click)="calculateAllBonusPremiums()"
+        [disabled]="!canCalculateBonusPremiumForSelectedMonth">
+  賞与保険料を計算（当月/一括）
+</button>        
+
+        
+        <button mat-raised-button
+        (click)="applyExemptionForSelectedMonth()"
+        [disabled]="!isExemptionButtonEnabled()"
+        color="primary">
+        免除を適用（当月/一括）
         </button>
+
+
+        <button
+        mat-raised-button
+        class="btn-csv"
+        (click)="exportMonthlyPremiums()"
+        [disabled]="!selectedMonth || displayEmployees.length === 0"
+      >
+        <mat-icon>download</mat-icon>
+        この月のCSVを出力（月額報酬）
+      </button>
+
+      <button
+      mat-raised-button
+      class="btn-csv"
+      (click)="exportBonusPremiums()"
+      [disabled]="!selectedMonth || bonusEmployees.length === 0"
+    >
+      <mat-icon>download</mat-icon>
+      この月のCSVを出力（賞与）
+    </button>
+
       </div>
 
       <div class="insurance-note" style="margin: 12px 0; font-size: 1rem; color: #666;">
@@ -98,7 +117,7 @@
     </mat-card-content>
   </mat-card>
     
-  <mat-card *ngIf="selectedCompanyId && selectedMonth">
+  <mat-card *ngIf="selectedCompanyId && selectedMonth && showEmployeeTable">
     <mat-card-title>従業員一覧（月額報酬）</mat-card-title>
     <mat-card-content>
       <table mat-table [dataSource]="displayEmployees" class="mat-elevation-z1" style="width: 100%;">
@@ -174,13 +193,20 @@
           </td>
         </ng-container>
 
-        <ng-container matColumnDef="actions">
+        <ng-container *ngIf="userRole === 'hr'" matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef>操作</th>
           <td mat-cell *matCellDef="let emp">
             <div class="employee-actions">
-              <button mat-raised-button color="primary" (click)="registerQualification(emp)" [disabled]="!emp.canRegisterQualification">
-                資格取得
-              </button>
+              <button
+              mat-raised-button
+              color="primary"
+              (click)="registerQualification(emp)"
+              [disabled]="!devForceAllButtons && (
+                emp.alreadyRegisteredQualification || selectedMonth !== (emp.joinDate | date:'yyyy-MM')
+              )"
+            >
+              資格取得
+            </button>
               <button mat-raised-button color="accent" (click)="registerFixed(emp)" [disabled]="!emp.canRegisterFixed">
                 定時決定
               </button>
@@ -192,12 +218,16 @@
 
         </ng-container>
         
-        <tr mat-header-row *matHeaderRowDef="['name', 'grade', 'health', 'pension', 'care', 'actions']"></tr>
-        <tr mat-row *matRowDef="let row; columns: ['name', 'grade', 'health', 'pension', 'care', 'actions']"></tr>
+        <tr mat-header-row *matHeaderRowDef="userRole === 'hr'
+        ? ['name', 'grade', 'health', 'pension', 'care', 'actions']
+        : ['name', 'grade', 'health', 'pension', 'care']"></tr>
+        <tr mat-row *matRowDef="let row; columns: userRole === 'hr'
+        ? ['name', 'grade', 'health', 'pension', 'care', 'actions']
+        : ['name', 'grade', 'health', 'pension', 'care']"></tr>
 
       </table>
 
-      <mat-card *ngIf="displayEmployees.length > 0" class="total-premium-summary" style="margin-top: 16px;">
+      <mat-card *ngIf="userRole === 'hr' && displayEmployees.length > 0" class="total-premium-summary" style="margin-top: 16px;">
         <mat-card-content>
           <div style="display: flex; flex-direction: column; gap: 4px; max-width: 560px;">
             <div style="display: flex;">
@@ -236,7 +266,7 @@
       </mat-card>
       
 
-      <mat-card *ngIf="bonusEmployees.length > 0">
+      <mat-card *ngIf="selectedCompanyId && selectedMonth && showBonusTable">
         <mat-card-title>従業員一覧（賞与）</mat-card-title>
         <mat-card-content>
           <table mat-table [dataSource]="bonusEmployees" class="mat-elevation-z1" style="width: 100%;">
@@ -310,12 +340,21 @@
 
 
       
-            <tr mat-header-row *matHeaderRowDef="['name', 'bonusAmount', 'bonusMergedIntoMonthly', 'bonusHealth', 'bonusPension', 'bonusCare']"></tr>
-            <tr mat-row *matRowDef="let row; columns: ['name', 'bonusAmount', 'bonusMergedIntoMonthly', 'bonusHealth', 'bonusPension', 'bonusCare']"></tr>
+            <tr mat-header-row *matHeaderRowDef="
+            userRole === 'hr'
+              ? ['name', 'bonusAmount', 'bonusMergedIntoMonthly', 'bonusHealth', 'bonusPension', 'bonusCare']
+              : ['name', 'bonusAmount', 'bonusMergedIntoMonthly', 'bonusHealth', 'bonusPension', 'bonusCare']
+          "></tr>
+          
+          <tr mat-row *matRowDef="let row; columns: 
+            userRole === 'hr'
+              ? ['name', 'bonusAmount', 'bonusMergedIntoMonthly', 'bonusHealth', 'bonusPension', 'bonusCare']
+              : ['name', 'bonusAmount', 'bonusMergedIntoMonthly', 'bonusHealth', 'bonusPension', 'bonusCare']
+          "></tr>          
 
           </table>
 
-          <mat-card *ngIf="bonusEmployees.length > 0" class="total-premium-summary" style="margin-top: 16px;">
+          <mat-card *ngIf="userRole === 'hr' && displayEmployees.length > 0" class="total-premium-summary" style="margin-top: 16px;">
             <mat-card-content>
               <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div>

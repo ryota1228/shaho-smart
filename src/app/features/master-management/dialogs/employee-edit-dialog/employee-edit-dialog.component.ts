@@ -55,7 +55,7 @@ export class EmployeeEditDialogComponent implements OnInit, AfterViewInit {
     private firestoreService: FirestoreService,
     private snackbar: MatSnackBar,
   ) {
-    this.employee = data?.employee ? { ...data.employee } : {
+    const defaultEmployee = {
       empNo: '',
       lastName: '',
       firstName: '',
@@ -74,10 +74,28 @@ export class EmployeeEditDialogComponent implements OnInit, AfterViewInit {
       expectedDuration: '',
       excludedBySocialAgreement: false,
       isDependentInsured: false,
+      hasExemption: false,
+      exemptionDetails: {
+        types: [],
+        targetInsurances: [],
+        startMonth: '',
+        endMonth: '',
+        notes: ''
+      }
     };
+  
+    this.employee = {
+      ...defaultEmployee,
+      ...(data?.employee ?? {}),
+      exemptionDetails: {
+        ...defaultEmployee.exemptionDetails,
+        ...(data?.employee?.exemptionDetails ?? {})
+      }
+    };
+  
     this.isEdit = !!data?.employee;
     this.companyId = data?.companyId;
-  }
+  }  
 
   @ViewChild(DependentEditDialogComponent) dependentForm!: DependentEditDialogComponent;
 

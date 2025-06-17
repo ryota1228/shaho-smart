@@ -26,6 +26,10 @@ function findGrade(grades: SalaryGrade[], amount: number): SalaryGrade | undefin
   );
 }
 
+function isCareInsuranceApplicable(emp: Employee): boolean {
+  return !!emp.careInsuranceStatus && emp.careInsuranceStatus.startsWith('加入') && emp.healthInsuranceStatus === '加入';
+}
+
 export function calculateInsurancePremiums(
   salary: number,
   employee: Employee,
@@ -33,7 +37,10 @@ export function calculateInsurancePremiums(
   rates: InsuranceRates,
   healthGrades: SalaryGrade[],
   pensionGrades: SalaryGrade[],
-  bonusMonthlyEquivalent?: number
+  bonusMonthlyEquivalent?: number,
+  applicableMonth?: string,
+  disableAutoExemption: boolean = false,
+  exemptionsOverride?: ('health' | 'pension' | 'care')[]
 ): InsurancePremiumRecord | undefined {
   if (!salary) return;
 
@@ -42,37 +49,103 @@ export function calculateInsurancePremiums(
 
   const healthGrade = findGrade(healthGrades, effectiveSalary);
   const pensionGrade = findGrade(pensionGrades, effectiveSalary);
+  const careGrade = findGrade(healthGrades, effectiveSalary);
 
   const healthMonthly = healthGrade?.monthly ?? 0;
   const pensionMonthly = pensionGrade?.monthly ?? 0;
+  const careMonthly = careGrade?.monthly ?? 0;
 
-  let careGrade: number | null = null;
-  if (
-    employee.careInsuranceStatus?.startsWith('加入') &&
-    healthGrade?.grade !== undefined
-  ) {
-    careGrade = healthGrade.grade;
+  // ✅ 年齢に基づく制度適用判定（副作用なし）
+  const isInsuranceApplicableByAge = (
+    birthDate: string,
+    month: string,
+    startAge: number,
+    endAge?: number
+  ): boolean => {
+    const dob = new Date(birthDate);
+    const birthDayBefore = new Date(dob.getFullYear(), dob.getMonth(), dob.getDate() - 1);
+    const startMonth = new Date(birthDayBefore.getFullYear() + startAge, birthDayBefore.getMonth(), 1);
+    const endMonth = endAge !== undefined
+      ? new Date(birthDayBefore.getFullYear() + endAge, birthDayBefore.getMonth(), 1)
+      : null;
+    const target = new Date(`${month}-01`);
+    return (!isNaN(target.getTime())) &&
+           target >= startMonth &&
+           (!endMonth || target < endMonth);
+  };
+
+  if (!applicableMonth || !employee.birthday) return;
+
+  const month = applicableMonth;
+  const birth = employee.birthday;
+  
+  const effectiveCareStatus = isInsuranceApplicableByAge(birth, month, 40, 65) ? '加入' : '対象外';
+  const effectiveHealthStatus = isInsuranceApplicableByAge(birth, month, 0, 75) ? '加入' : '対象外';
+  const effectivePensionStatus = isInsuranceApplicableByAge(birth, month, 0, 70) ? '加入' : '対象外';
+  
+  const isCareApplicable = effectiveCareStatus === '加入' && effectiveHealthStatus === '加入';
+
+  const isExempted = (type: 'health' | 'pension' | 'care'): boolean => {
+    const manualOverride = exemptionsOverride?.includes(type);
+    console.log(`[免除override] empNo=${employee.empNo} type=${type} → ${manualOverride}`);
+    if (manualOverride) return true;
+  
+    const ex = employee.exemptionDetails;
+    const result =
+      !disableAutoExemption &&
+      employee.hasExemption &&
+      ex &&
+      ex.targetInsurances?.includes(type) &&
+      applicableMonth &&
+      (!ex.startMonth || ex.startMonth <= applicableMonth) &&
+      (!ex.endMonth || applicableMonth <= ex.endMonth);
+  
+    console.log(`[免除fallback] empNo=${employee.empNo} type=${type} → ${result}`);
+    return !!result;
+  };
+
+  const healthPremiumRaw = calc(rates.health, healthMonthly);
+  const pensionPremiumRaw = calc(rates.pension, pensionMonthly);
+  const carePremiumRaw = calc(rates.care, careMonthly);
+
+  let healthPremium: PremiumBreakdown = { ...healthPremiumRaw };
+  if (!effectiveHealthStatus?.includes('加入')) {
+    healthPremium = { employee: 0, company: 0, total: 0 };
+  } else if (isExempted('health')) {
+    healthPremium = { employee: 0, company: 0, total: 0 };
   }
 
-  const careMonthly = careGrade !== null ? healthMonthly : 0;
+  let pensionPremium: PremiumBreakdown = { ...pensionPremiumRaw };
+  if (!effectivePensionStatus?.includes('加入')) {
+    pensionPremium = { employee: 0, company: 0, total: 0 };
+  } else if (isExempted('pension')) {
+    pensionPremium = { employee: 0, company: 0, total: 0 };
+  }
+
+  let carePremium: PremiumBreakdown = { ...carePremiumRaw };
+  if (!isCareApplicable || !effectiveCareStatus?.includes('加入')) {
+    carePremium = { employee: 0, company: 0, total: 0 };
+  } else if (isExempted('care')) {
+    carePremium = { employee: 0, company: 0, total: 0 };
+  }
 
   return {
-    applicableMonth: '',
+    applicableMonth: applicableMonth ?? '',
     empNo: employee.empNo,
     companyId: company.companyId,
     calculatedAt: now,
     standardMonthlyAmount: healthMonthly,
     healthGrade: healthGrade?.grade ?? null,
     pensionGrade: pensionGrade?.grade ?? null,
-    careGrade,
-    health: calc(rates.health, healthMonthly),
-    pension: calc(rates.pension, pensionMonthly),
-    care: careGrade !== null && rates.care ? calc(rates.care, careMonthly) : null,
+    careGrade: careGrade?.grade ?? null,
+    health: healthPremium,
+    pension: pensionPremium,
+    care: carePremium,
     standardMonthlyAmountBreakdown: {
       baseSalary: salary,
       bonusMonthlyEquivalent: bonusMonthlyEquivalent ?? null,
-      allowances: []
-    }
+      allowances: [],
+    },
   };
 }
 
@@ -119,34 +192,80 @@ export function calculateBonusPremium(
   employee: Employee,
   company: Company,
   rates: InsuranceRates,
-  includedInStandardBonus: boolean
+  includedInStandardBonus: boolean,
+  applicableMonth?: string
 ): BonusPremiumResult | undefined {
   if (!rawBonus) return;
 
   const standardBonusAmount = Math.floor(rawBonus / 1000) * 1000;
+  const result: BonusPremiumResult = { standardBonusAmount };
 
-  const result: BonusPremiumResult = {
-    standardBonusAmount
+  const isExempted = (type: 'health' | 'pension' | 'care') => {
+    const ex = employee.exemptionDetails;
+    if (!employee.hasExemption || !ex) return false;
+    if (!ex.targetInsurances?.includes(type)) return false;
+    if (!applicableMonth) return false;
+    return (
+      (!ex.startMonth || ex.startMonth <= applicableMonth) &&
+      (!ex.endMonth || applicableMonth <= ex.endMonth)
+    );
   };
 
-  if (employee.healthInsuranceStatus === '加入') {
-    result.health = calc(rates.health, standardBonusAmount);
+  // ✅ 制度準拠の保険適用判定（誕生日×対象月）
+  const isInsuranceApplicableByAge = (
+    birthDate: string,
+    month: string,
+    startAge: number,
+    endAge?: number
+  ): boolean => {
+    const dob = new Date(birthDate);
+    const birthDayBefore = new Date(dob.getFullYear(), dob.getMonth(), dob.getDate() - 1);
+    const startMonth = new Date(birthDayBefore.getFullYear() + startAge, birthDayBefore.getMonth(), 1);
+    const endMonth = endAge !== undefined
+      ? new Date(birthDayBefore.getFullYear() + endAge, birthDayBefore.getMonth(), 1)
+      : null;
+    const target = new Date(`${month}-01`);
+    return (!isNaN(target.getTime())) &&
+           target >= startMonth &&
+           (!endMonth || target < endMonth);
+  };
+
+  const birth = employee.birthday ?? '';
+  const month = applicableMonth ?? '';
+
+  const isHealthApplicable = applicableMonth && birth
+    ? isInsuranceApplicableByAge(birth, month, 0, 75)
+    : employee.healthInsuranceStatus === '加入';
+
+  const isPensionApplicable = applicableMonth && birth
+    ? isInsuranceApplicableByAge(birth, month, 0, 70)
+    : employee.pensionStatus === '加入';
+
+  const isCareApplicable = applicableMonth && birth
+    ? isInsuranceApplicableByAge(birth, month, 40, 65) && isHealthApplicable
+    : employee.careInsuranceStatus?.startsWith('加入') && employee.healthInsuranceStatus === '加入';
+
+  // 保険料計算
+  if (isHealthApplicable) {
+    result.health = isExempted('health')
+      ? { employee: 0, company: 0, total: 0 }
+      : calc(rates.health, standardBonusAmount);
   }
 
-  if (employee.pensionStatus === '加入') {
-    result.pension = calc(rates.pension, standardBonusAmount);
+  if (isPensionApplicable) {
+    result.pension = isExempted('pension')
+      ? { employee: 0, company: 0, total: 0 }
+      : calc(rates.pension, standardBonusAmount);
   }
 
-  if (
-    employee.careInsuranceStatus?.startsWith('加入') &&
-    employee.healthInsuranceStatus === '加入'
-  ) {
-    result.care = calc(rates.care, standardBonusAmount);
+  if (isCareApplicable) {
+    result.care = isExempted('care')
+      ? { employee: 0, company: 0, total: 0 }
+      : calc(rates.care, standardBonusAmount);
   }
 
   return result;
 }
-
 
 export function calculateBonusPremiumsForEmployee(
   employee: Employee,
@@ -163,25 +282,22 @@ export function calculateBonusPremiumsForEmployee(
     return d.getMonth() + 1 >= 4 ? d.getFullYear() : d.getFullYear() - 1;
   };
 
-  
   const defaultRates = ratesTable[company.prefecture];
 
   const rates: InsuranceRates =
-  company.healthType === '組合健保' && company.customRates
-    ? {
-        health: {
-          employee: parseFloat(company.customRates.health?.employee ?? '0'),
-          company: parseFloat(company.customRates.health?.company ?? '0'),
-        },
-        pension: defaultRates.pension,
-        care: {
-          employee: parseFloat(company.customRates.care?.employee ?? '0'),
-          company: parseFloat(company.customRates.care?.company ?? '0'),
+    company.healthType === '組合健保' && company.customRates
+      ? {
+          health: {
+            employee: parseFloat(company.customRates.health?.employee ?? '0'),
+            company: parseFloat(company.customRates.health?.company ?? '0'),
+          },
+          pension: defaultRates.pension,
+          care: {
+            employee: parseFloat(company.customRates.care?.employee ?? '0'),
+            company: parseFloat(company.customRates.care?.company ?? '0'),
+          },
         }
-      }
-    : defaultRates;
-
-  
+      : defaultRates;
 
   for (const bonus of employee.bonusRecords) {
     const bonusId = bonus.bonusId ?? bonus.applicableMonth;
@@ -223,21 +339,44 @@ export function calculateBonusPremiumsForEmployee(
         standardBonusAmount: 0,
         health: { employee: 0, company: 0, total: 0 },
         pension: { employee: 0, company: 0, total: 0 },
-        care:
-          employee.careInsuranceStatus?.startsWith('加入')
+        care: (() => {
+          const birth = employee.birthday ?? '';
+          const month = bonus.applicableMonth ?? '';
+          const isInsuranceApplicableByAge = (
+            birthDate: string,
+            month: string,
+            startAge: number,
+            endAge?: number
+          ): boolean => {
+            const dob = new Date(birthDate);
+            const birthDayBefore = new Date(dob.getFullYear(), dob.getMonth(), dob.getDate() - 1);
+            const startMonth = new Date(birthDayBefore.getFullYear() + startAge, birthDayBefore.getMonth(), 1);
+            const endMonth = endAge !== undefined
+              ? new Date(birthDayBefore.getFullYear() + endAge, birthDayBefore.getMonth(), 1)
+              : null;
+            const target = new Date(`${month}-01`);
+            return (!isNaN(target.getTime())) &&
+                   target >= startMonth &&
+                   (!endMonth || target < endMonth);
+          };
+        
+          const isCareApplicable = birth && isInsuranceApplicableByAge(birth, month, 40, 65);
+        
+          return isCareApplicable
             ? { employee: 0, company: 0, total: 0 }
-            : null,
+            : null;
+        })(),
       });
       continue;
     }
 
-    // ✅ customRatesを反映したratesを渡す
     const premium = calculateBonusPremium(
       applicableBonus,
       employee,
       company,
       rates,
-      false
+      false,
+      bonus.applicableMonth
     );
 
     if (!premium) continue;
@@ -250,14 +389,15 @@ export function calculateBonusPremiumsForEmployee(
       applicableMonth: bonus.applicableMonth,
       calculatedAt: now,
       standardBonusAmount: premium.standardBonusAmount,
-      health: premium.health ? { ...premium.health } : null,
-      pension: premium.pension ? { ...premium.pension } : null,
-      care: premium.care ? { ...premium.care } : null,
+      health: premium.health ?? null,
+      pension: premium.pension ?? null,
+      care: premium.care ?? null,
     });
   }
 
   return bonusPremiums;
 }
+
 
 export function getAverageStandardMonthlyAmount(
   incomeRecords: IncomeRecord[],
@@ -294,35 +434,41 @@ export function getAverageStandardMonthlyAmount(
       }
     : defaultRates;
 
-
-  const records = incomeRecords.map(income => {
-    const bonusMonthlyEquivalent = bonuses
-      .filter(b => b.applicableMonth === income.applicableMonth && b.includedInStandardBonus)
-      .reduce((sum, b) => sum + b.amount / 12, 0);
-
-    const premium = calculateInsurancePremiums(
-      income.totalMonthlyIncome,
+    const records = incomeRecords.map(income => {
+      const bonusMonthlyEquivalent = bonuses
+        .filter(b => b.applicableMonth === income.applicableMonth && b.includedInStandardBonus)
+        .reduce((sum, b) => sum + b.amount / 12, 0);
+    
+      const premium = calculateInsurancePremiums(
+        income.totalMonthlyIncome,
+        employee,
+        company,
+        rates,
+        healthGrades,
+        pensionGrades,
+        bonusMonthlyEquivalent,
+        income.applicableMonth
+      );
+    
+      return premium?.standardMonthlyAmount ?? 0;
+    });
+    
+    const averageAmount = Math.round(records.reduce((a, b) => a + b, 0) / records.length);
+    
+    const latestMonth = incomeRecords
+      .map(r => r.applicableMonth)
+      .sort((a, b) => b.localeCompare(a))[0] ?? '';
+    
+    const resultPremium = calculateInsurancePremiums(
+      averageAmount,
       employee,
       company,
       rates,
       healthGrades,
       pensionGrades,
-      bonusMonthlyEquivalent
-    );
-
-    return premium?.standardMonthlyAmount ?? 0;
-  });
-
-  const averageAmount = Math.round(records.reduce((a, b) => a + b, 0) / records.length);
-
-  const resultPremium = calculateInsurancePremiums(
-    averageAmount,
-    employee,
-    company,
-    rates,
-    healthGrades,
-    pensionGrades
-  );
+      undefined,
+      latestMonth
+    );    
 
   return {
     averageAmount,
@@ -428,24 +574,27 @@ export function calculateRevisedInsurancePremium(
     care: { employee: 0, company: 0 }
   };
 
-  const defaultRates = company.prefecture && ratesTable[company.prefecture]
-  ? ratesTable[company.prefecture]
-  : fallbackRates;
+  const defaultRates =
+    company.prefecture && ratesTable[company.prefecture]
+      ? ratesTable[company.prefecture]
+      : fallbackRates;
 
   const rates: InsuranceRates =
-  company.healthType === '組合健保' && company.customRates
-    ? {
-        health: {
-          employee: parseFloat(company.customRates.health?.employee ?? '0'),
-          company: parseFloat(company.customRates.health?.company ?? '0')
-        },
-        pension: defaultRates.pension,
-        care: {
-          employee: parseFloat(company.customRates.care?.employee ?? '0'),
-          company: parseFloat(company.customRates.care?.company ?? '0')
+    company.healthType === '組合健保' && company.customRates
+      ? {
+          health: {
+            employee: parseFloat(company.customRates.health?.employee ?? '0'),
+            company: parseFloat(company.customRates.health?.company ?? '0')
+          },
+          pension: defaultRates.pension,
+          care: {
+            employee: parseFloat(company.customRates.care?.employee ?? '0'),
+            company: parseFloat(company.customRates.care?.company ?? '0')
+          }
         }
-      }
-    : defaultRates;
+      : defaultRates;
+
+  const applicableMonth = incomeRecords[2].applicableMonth;
 
   const premium = calculateInsurancePremiums(
     averageAmount,
@@ -453,7 +602,9 @@ export function calculateRevisedInsurancePremium(
     company,
     rates,
     healthGrades,
-    pensionGrades
+    pensionGrades,
+    undefined,
+    applicableMonth
   );
 
   return premium ?? null;

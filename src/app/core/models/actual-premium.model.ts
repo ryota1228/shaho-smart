@@ -1,7 +1,7 @@
 import { Timestamp } from '@angular/fire/firestore';
 import { StandardMonthlyAmountBreakdown } from './insurance-premium.model';
 
-export type ActualPremiumMethod = 'qualification' | 'fixed' | 'revised' | 'loss';
+export type ActualPremiumMethod = 'qualification' | 'fixed' | 'revised' | 'loss' | 'exemption';
 
 export interface ActualPremiumEntry {
   grade: number;

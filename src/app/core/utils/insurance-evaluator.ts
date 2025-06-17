@@ -44,11 +44,12 @@ export function evaluateInsuranceStatus(
   employee: Employee,
   company: Company,
   latestIncome?: { totalMonthlyIncome?: number },
-  allEmployees: Employee[] = []
+  allEmployees: Employee[] = [],
+  applicableMonth?: string
 ): Partial<Employee> {
-  const health = evaluateHealthInsurance(employee, company, latestIncome, allEmployees);
-  const pension = evaluatePension(employee, company, latestIncome, allEmployees);
-  const care = evaluateCareInsurance({ ...employee, ...health });
+  const health = evaluateHealthInsurance(employee, company, latestIncome, allEmployees, applicableMonth);
+  const pension = evaluatePension(employee, company, latestIncome, allEmployees, applicableMonth);
+  const care = evaluateCareInsurance({ ...employee, ...health }, applicableMonth);
   return { ...health, ...pension, ...care };
 }
 
@@ -56,14 +57,18 @@ function evaluateHealthInsurance(
   employee: Employee,
   company: Company,
   latestIncome?: { totalMonthlyIncome?: number },
-  allEmployees: Employee[] = []
+  allEmployees: Employee[] = [],
+  applicableMonth?: string
 ): Partial<Employee> {
   console.log(`▶ 健康保険判定開始 for ${employee.empNo}`);
 
   const reasons: string[] = [];
-  const age = getAge(employee.birthday);
 
-  // ✅ 追加: 社会保障協定で除外
+  const age = applicableMonth
+    ? getAgeAtMonth(employee.birthday, applicableMonth)
+    : getAge(employee.birthday);
+
+  // ✅ 社会保障協定で除外
   if (employee.excludedBySocialAgreement) {
     return {
       healthInsuranceStatus: '対象外',
@@ -71,7 +76,7 @@ function evaluateHealthInsurance(
     };
   }
 
-  // ✅ 追加: 本人が扶養に入っている
+  // ✅ 本人が扶養に入っている
   if (employee.isDependentInsured) {
     return {
       healthInsuranceStatus: '対象外',
@@ -132,14 +137,18 @@ function evaluatePension(
   employee: Employee,
   company: Company,
   latestIncome?: { totalMonthlyIncome?: number },
-  allEmployees: Employee[] = []
+  allEmployees: Employee[] = [],
+  applicableMonth?: string
 ): Partial<Employee> {
   console.log(`▶ 厚生年金保険判定開始 for ${employee.empNo}`);
 
   const reasons: string[] = [];
-  const age = getAge(employee.birthday);
 
-  // ✅ 追加: 社会保障協定で除外
+  const age = applicableMonth
+    ? getAgeAtMonth(employee.birthday, applicableMonth)
+    : getAge(employee.birthday);
+
+  // ✅ 社会保障協定で除外
   if (employee.excludedBySocialAgreement) {
     return {
       pensionStatus: '対象外',
@@ -147,7 +156,9 @@ function evaluatePension(
     };
   }
 
-  if (age >= 70) reasons.push('70歳以上');
+  if (age >= 70) {
+    reasons.push('70歳以上');
+  }
 
   const isApplicable =
     company.isApplicableToPension ||
@@ -158,6 +169,7 @@ function evaluatePension(
   const fullTime = company.standardWeeklyHours ?? 40;
   const isShort = employee.weeklyHours < fullTime * 0.75;
 
+  console.log(`- 年齢: ${age}`);
   console.log(`- 適用事業所: ${company.isApplicableToPension} / 任意適用: ${company.voluntaryPensionApplicable}`);
   console.log(`- 雇用区分: ${employmentType} / 常用雇用 = ${isRegular}`);
   console.log(`- フルタイム基準: ${fullTime}h → 実勤務: ${employee.weeklyHours}h → isShort=${isShort}`);
@@ -189,10 +201,11 @@ function evaluatePension(
   };
 }
 
-function evaluateCareInsurance(employee: Employee): Partial<Employee> {
-  const age = getAge(employee.birthday);
+function evaluateCareInsurance(employee: Employee, applicableMonth?: string): Partial<Employee> {
+  const age = applicableMonth
+    ? getAgeAtMonth(employee.birthday, applicableMonth)
+    : getAge(employee.birthday);
 
-  // ✅ 追加: 社会保障協定または扶養の場合は除外
   if (employee.excludedBySocialAgreement) {
     return {
       careInsuranceStatus: '対象外',
@@ -228,4 +241,29 @@ function evaluateCareInsurance(employee: Employee): Partial<Employee> {
       careInsuranceReason: '対象年齢外'
     };
   }
+}
+
+export function getAgeAtMonth(birthday: string, targetMonth: string): number {
+  const [birthY, birthM, birthD] = birthday.split('-').map(Number);
+  const [targetY, targetM] = targetMonth.split('-').map(Number);
+  let age = targetY - birthY;
+  if (targetM < birthM || (targetM === birthM && 1 < birthD)) {
+    age--;
+  }
+  return age;
+}
+
+export function isCareInsuranceApplicable(birthday: string, month: string): boolean {
+  const age = getAgeAtMonth(birthday, month);
+  return age >= 40 && age < 65;
+}
+
+export function isHealthInsuranceApplicable(birthday: string, month: string): boolean {
+  const age = getAgeAtMonth(birthday, month);
+  return age < 75;
+}
+
+export function isPensionApplicable(birthday: string, month: string): boolean {
+  const age = getAgeAtMonth(birthday, month);
+  return age < 70;
 }

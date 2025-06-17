@@ -6,10 +6,10 @@ import { FirestoreService } from '../../core/services/firestore.service';
 import { AuthService } from '../../core/services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { Company } from '../../core/models/company.model';
-import { Employee, ExtendedEmployee } from '../../core/models/employee.model';
+import { BonusRecord, Employee, ExtendedEmployee } from '../../core/models/employee.model';
 import { MatDialog } from '@angular/material/dialog';
 import { PremiumHistoryDialogComponent } from './dialogs/premium-history-dialog/premium-history-dialog.component';
-import { calculateInsurancePremiums, calculateRevisedInsurancePremium, checkRevisedEligibility, getAverageStandardMonthlyAmount, InsuranceRates } from '../../core/utils/calculateInsurancePremiums';
+import { calculateBonusPremium, calculateInsurancePremiums, calculateRevisedInsurancePremium, checkRevisedEligibility, getAverageStandardMonthlyAmount, InsuranceRates } from '../../core/utils/calculateInsurancePremiums';
 import { SalaryGrade, getStandardSalaryGrade, parseSalaryGrades } from '../../core/utils/salary-grade.util';
 import { evaluateInsuranceStatus } from '../../core/utils/insurance-evaluator';
 import { EmployeeInsurancePremiums, InsurancePremiumSnapshot } from '../../core/models/insurance-premium.model';
@@ -21,6 +21,8 @@ import { PdfMakeWrapper, Txt, Table, Img } from 'pdfmake-wrapper';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { pdfMakeVfs } from '../../pdf/vfs_fonts';
 import pdfMake from 'pdfmake/build/pdfmake';
+import { BonusPremiumRecord } from '../../core/models/bonus-premium.model';
+import { IncomeRecord } from '../../core/models/income-record.model';
 
 
 
@@ -34,10 +36,8 @@ export async function exportInsuranceReportPDF(records: InsuranceReportRecord[],
     console.log('[DEBUG] typeof pdfMakeVfs:', typeof pdfMakeVfs);
     console.log('[DEBUG] vfs font key check:', pdfMakeVfs['NotoSansJP-Regular.ttf']?.slice(0, 30));
 
-    // 🔧 vfsを設定
     pdfMake.vfs = pdfMakeVfs;
 
-    // 🔧 フォントを定義
     pdfMake.fonts = {
       NotoSansJP: {
         normal: 'NotoSansJP-Regular.ttf',
@@ -53,7 +53,6 @@ export async function exportInsuranceReportPDF(records: InsuranceReportRecord[],
       }
     };
 
-    // 📄 テーブル本体
     const body: { text: string; bold?: boolean }[][] = [
       [
         { text: '社員番号', bold: true },
@@ -84,7 +83,6 @@ export async function exportInsuranceReportPDF(records: InsuranceReportRecord[],
       ]);
     });
 
-    // 📄 ドキュメント定義
     const docDefinition: any = {
       content: [
         { text: `保険料一覧（${targetMonth}）`, style: 'header', margin: [0, 0, 0, 10] },
@@ -185,40 +183,91 @@ export class InsurancePremiumComponent implements OnInit {
     private snackBar: MatSnackBar
   ) {}
 
-  
+  employeeCompanyRoles: { [key: string]: 'hr' | 'employee' } = {};
+  filteredBonusEmployees: Employee[] = [];
 
   async ngOnInit(): Promise<void> {
     this.http.get<Record<string, InsuranceRates>>('assets/data/prefecture-insurance-rates.json')
       .subscribe(data => this.insuranceRatesTable = data);
-
+  
     this.http.get<SalaryGrade[]>('assets/data/salary-grade.json')
       .subscribe(data => {
         this.salaryGradeTable = parseSalaryGrades(data);
       });
-
+  
     this.http.get<SalaryGrade[]>('assets/data/pension-grade.json')
       .subscribe(data => {
         this.pensionGradeTable = parseSalaryGrades(data);
       });
-
+  
     const uid = this.authService.getUid();
     if (!uid) return;
-
-    this.firestoreService.getCompanyListByUser(uid).subscribe(companies => {
-      this.companyList = companies;
-    });
+  
+    const companyRoles = await this.firestoreService.getCompaniesForUser(uid);
+    const companyDocs = await Promise.all(
+      companyRoles.map(async ({ companyId }) => {
+        const company = await this.firestoreService.getCompany(companyId);
+        return company ? { ...company } : null;
+      })
+    );
+    
+    this.companyList = companyDocs.filter((c): c is Company => c !== null);    
   }
+  
+  
 
-  selectCompany(company: Company): void {
+  userRole: 'hr' | 'employee' | null = null;
+
+  async selectCompany(company: Company): Promise<void> {
+    const uid = this.authService.getUid();
+    if (!uid) return;
+  
+    const role = await this.firestoreService.getUserRoleForCompany(uid, company.companyId);
+  
+    if (!role) {
+      console.warn(`[selectCompany] roleなし → 選択無効: ${company.companyId}`);
+      this.selectedCompanyId = null;
+      this.selectedCompany = null;
+      this.userRole = null;
+      this.displayEmployees = [];
+      this.bonusEmployees = [];
+      this.filteredBonusEmployees = [];
+      return;
+    }
+  
     this.selectedCompanyId = company.companyId;
     this.selectedCompany = company;
-
+    this.userRole = role;
+  
     this.firestoreService.getEmployeesForCompany(company.companyId).subscribe(emps => {
       this.allEmployees = emps;
+  
+      this.displayEmployees = (role === 'hr')
+        ? emps
+        : emps.filter(e => e.firebaseUid === uid);
+
+      this.bonusEmployees = emps.filter(e => e.bonusRecords?.length);
+  
+      this.filteredBonusEmployees = (role === 'hr')
+        ? this.bonusEmployees
+        : this.bonusEmployees.filter(e => e.firebaseUid === uid);
+  
       this.loadSavedPremiums();
     });
   }
 
+  get showEmployeeTable(): boolean {
+    const uid = this.authService.getUid();
+    console.log('[showEmployeeTable] uid:', uid);
+    console.log('[showEmployeeTable] displayEmployees:', this.displayEmployees.map(e => e.firebaseUid));
+    return this.userRole === 'hr' || this.displayEmployees.some(e => e.firebaseUid === uid);
+  }
+  
+  
+  get showBonusTable(): boolean {
+    return this.userRole === 'hr' || this.bonusEmployees.some(e => e.firebaseUid === this.authService.getUid());
+  }  
+ 
   async calculateAllPremiums(): Promise<void> {
     if (!this.selectedCompanyId || !this.selectedMonth || !this.selectedCompany) return;
   
@@ -226,7 +275,7 @@ export class InsurancePremiumComponent implements OnInit {
       const income = await this.firestoreService.getIncomeRecords(this.selectedCompanyId!, emp.empNo);
       const monthData = income.find(i => i.applicableMonth === this.selectedMonth);
   
-      const evaluated = evaluateInsuranceStatus(emp, this.selectedCompany!, monthData);
+      const evaluated = evaluateInsuranceStatus(emp, this.selectedCompany!, monthData, this.allEmployees, this.selectedMonth);
   
       if (!monthData || !monthData.totalMonthlyIncome) {
         return {
@@ -314,7 +363,7 @@ export class InsurancePremiumComponent implements OnInit {
       const bonusPremiums = calculateBonusPremiumsForEmployee(
         enrichedEmp,
         this.selectedCompany!,
-        this.insuranceRatesTable // ← Bonus 側の関数は ratesTable を受け取る関数なのでそのままでOK
+        this.insuranceRatesTable
       );
   
       for (const bonus of bonusPremiums) {
@@ -347,8 +396,13 @@ export class InsurancePremiumComponent implements OnInit {
       };
     });
   
-    this.displayEmployees = await Promise.all(promises);
-  
+    const results = await Promise.all(promises);
+
+    this.displayEmployees = this.userRole === 'hr'
+      ? results
+      : results.filter(e => e.firebaseUid === this.authService.getUid());
+    
+
     await this.loadBonusPremiums();
   }
   
@@ -414,9 +468,9 @@ export class InsurancePremiumComponent implements OnInit {
   
     const headers = [
       '社員番号', '氏名', '標準報酬月額',
-      '健康保険料（本人）', '健康保険料（会社）', '健康保険料（合計）',
-      '介護保険料（本人）', '介護保険料（会社）', '介護保険料（合計）',
-      '厚生年金保険料（本人）', '厚生年金保険料（会社）', '厚生年金保険料（合計）'
+      '健康保険料（本人）', '健康保険料（会社/目安）', '健康保険料（合計）',
+      '介護保険料（本人）', '介護保険料（会社/目安）', '介護保険料（合計）',
+      '厚生年金保険料（本人）', '厚生年金保険料（会社/目安）', '厚生年金保険料（合計）'
     ];
   
     const rows = this.displayEmployees.map(emp => [
@@ -445,8 +499,61 @@ export class InsurancePremiumComponent implements OnInit {
     a.download = `保険料_${this.selectedMonth}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }  
+  }
 
+  bonusPremiums: BonusPremiumRecord[] = [];
+
+  exportBonusPremiums(): void {
+    if (!this.selectedMonth || !this.bonusPremiums?.length) return;
+  
+    const filtered = this.bonusPremiums.filter(
+      (p: BonusPremiumRecord) => p.applicableMonth === this.selectedMonth
+    );
+    if (filtered.length === 0) return;
+  
+    const headers = [
+      '社員番号', '氏名', '対象月', '標準賞与額',
+      '健康保険料（本人）', '健康保険料（会社）', '健康保険料（合計）',
+      '介護保険料（本人）', '介護保険料（会社）', '介護保険料（合計）',
+      '厚生年金保険料（本人）', '厚生年金保険料（会社）', '厚生年金保険料（合計）'
+    ];
+  
+    const rows = filtered.map((p: BonusPremiumRecord): string[] => {
+      const match = this.displayEmployees.find(e => e.empNo === p.empNo);
+      const fullName = match ? `${match.lastName} ${match.firstName}` : '';
+  
+      return [
+        p.empNo,
+        fullName,
+        p.applicableMonth,
+        String(p.standardBonusAmount ?? ''),
+        String(p.health?.employee ?? ''),
+        String(p.health?.company ?? ''),
+        String(p.health?.total ?? ''),
+        String(p.care?.employee ?? ''),
+        String(p.care?.company ?? ''),
+        String(p.care?.total ?? ''),
+        String(p.pension?.employee ?? ''),
+        String(p.pension?.company ?? ''),
+        String(p.pension?.total ?? '')
+      ];
+    });  
+  
+    const csvContent = [headers, ...rows]
+      .map((row: string[]) => row.map((col: string) => `"${col}"`).join(','))
+      .join('\n');
+  
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `賞与保険料_${this.selectedMonth}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  
+  
+  
   getTotalPremiums(): {
     health: number;
     healthEmployee: number;
@@ -567,12 +674,14 @@ export class InsurancePremiumComponent implements OnInit {
       const qualification = actuals.find(r => r.method === 'qualification');
   
       const joinStr = typeof emp.joinDate === 'string'
-        ? emp.joinDate.substring(0, 7)
-        : new Date(emp.joinDate).toISOString().substring(0, 7);
-  
+      ? emp.joinDate.substring(0, 7)
+      : new Date(emp.joinDate).toISOString().substring(0, 7);
+      
+      const isThisMonthJoin = joinStr === this.selectedMonth;
       const isQualificationTarget = !qualification;
-      const canRegisterQualification = this.devForceAllButtons || isQualificationTarget;
-  
+      
+      const canRegisterQualification = this.devForceAllButtons || (isThisMonthJoin && isQualificationTarget);
+    
       const canRegisterRevised = this.devForceAllButtons || await this.shouldShowRevised(emp);
   
       let canRegisterFixed = false;
@@ -640,25 +749,24 @@ export class InsurancePremiumComponent implements OnInit {
       };
     });
   
-    this.displayEmployees = await Promise.all(promises);
+    this.displayEmployees = (this.userRole === 'hr')
+    ? await Promise.all(promises)
+    : (await Promise.all(promises)).filter(e => e.firebaseUid === this.authService.getUid());
+  
   }
-        
+
   async loadBonusPremiums(): Promise<void> {
     if (!this.selectedCompanyId || !this.selectedMonth || !this.selectedCompany) return;
   
     console.log('🔍 loadBonusPremiums 実行 - selectedMonth:', this.selectedMonth);
+  
+    const uid = this.authService.getUid();
   
     const promises = this.allEmployees.map(async emp => {
       const bonusRecords = await this.firestoreService.getBonusPremiumRecords(
         this.selectedCompanyId!,
         emp.empNo
       );
-  
-      console.log(`📦 ${emp.empNo} の bonusRecords:`, bonusRecords.map(b => ({
-        bonusId: b.bonusId,
-        applicableMonth: b.applicableMonth,
-        standardBonusAmount: b.standardBonusAmount
-      })));
   
       const normalizeMonth = (monthStr: string): string => {
         const [y, m] = monthStr.split('-');
@@ -667,24 +775,11 @@ export class InsurancePremiumComponent implements OnInit {
       
       const monthRecords = bonusRecords.filter(b => {
         const normalized = normalizeMonth(b.applicableMonth ?? '');
-        const isMatch = normalized === this.selectedMonth;
-        if (!isMatch) {
-          console.warn(`📛 スキップ: bonusId=${b.bonusId}, applicableMonth=${b.applicableMonth}, normalized=${normalized}, selected=${this.selectedMonth}`);
-        }
-        return isMatch;
-      });      
-  
-      console.log(`🧐 ${emp.empNo} → 該当月 ${this.selectedMonth} の monthRecords:`, monthRecords);
+        return normalized === this.selectedMonth;
+      });
   
       const mainRecord =
-        monthRecords.find(b => b.standardBonusAmount > 0) ??
-        monthRecords[0];        
-  
-      if (!mainRecord) {
-        console.warn(`⚠️ ${emp.empNo} に該当する bonusPremiumRecord が見つかりませんでした`);
-      } else {
-        console.log(`✅ ${emp.empNo} mainRecord 採用:`, mainRecord);
-      }
+        monthRecords.find(b => b.standardBonusAmount > 0) ?? monthRecords[0];
   
       return {
         ...emp,
@@ -711,9 +806,23 @@ export class InsurancePremiumComponent implements OnInit {
       };
     });
   
-    this.bonusEmployees = await Promise.all(promises);
-  }  
-
+    const resolved = await Promise.all(promises);
+  
+    this.bonusEmployees = (this.userRole === 'hr')
+      ? resolved
+      : resolved.filter(e => e.firebaseUid === uid);
+  
+    const allRecords = await Promise.all(
+      this.allEmployees.map(emp =>
+        this.firestoreService.getBonusPremiumRecords(this.selectedCompanyId!, emp.empNo)
+      )
+    );
+  
+    this.bonusPremiums = allRecords
+      .flat()
+      .filter(r => r.applicableMonth === this.selectedMonth);
+  }
+  
   toggleBonusDetail(type: 'health' | 'pension' | 'care'): void {
     switch (type) {
       case 'health':
@@ -839,80 +948,28 @@ export class InsurancePremiumComponent implements OnInit {
   
     const bonusMonthlyEquivalent = computeBonusMonthlyEquivalent(emp);
   
-    const enriched = {
-      ...emp,
-      ...evaluateInsuranceStatus(emp, this.selectedCompany, thisMonthIncome)
-    };
-  
     const prefecture = this.selectedCompany.prefecture ?? 'default';
-
     const fallbackRates: InsuranceRates = {
       health: { employee: 0, company: 0 },
       pension: { employee: 0, company: 0 },
       care: { employee: 0, company: 0 }
     };
-    
     const prefectureRates = this.insuranceRatesTable[prefecture] ?? fallbackRates;
-    
+  
     const rates: InsuranceRates =
-    this.selectedCompany.healthType === '組合健保' && this.selectedCompany.customRates
-      ? {
-          health: {
-            employee: parseFloat(this.selectedCompany.customRates.health?.employee ?? '0'),
-            company: parseFloat(this.selectedCompany.customRates.health?.company ?? '0'),
-          },
-          pension: prefectureRates.pension,
-          care: {
-            employee: parseFloat(this.selectedCompany.customRates.care?.employee ?? '0'),
-            company: parseFloat(this.selectedCompany.customRates.care?.company ?? '0'),
-          },
-        }
-      : prefectureRates;
-  
-    
-    const raw = calculateInsurancePremiums(
-      thisMonthIncome.totalMonthlyIncome,
-      enriched,
-      this.selectedCompany,
-      rates,
-      this.salaryGradeTable,
-      this.pensionGradeTable,
-      bonusMonthlyEquivalent
-    );    
-  
-    if (!raw) {
-      alert('保険料計算に失敗しました');
-      return;
-    }
-  
-    const snapshot: InsurancePremiumSnapshot = {
-      standardMonthlyAmount: raw.standardMonthlyAmount,
-      standardMonthlyAmountBreakdown: this.sanitizeBreakdown(raw.standardMonthlyAmountBreakdown),
-      healthGrade: raw.healthGrade!,
-      pensionGrade: raw.pensionGrade!,
-      careGrade: raw.careGrade ?? null,
-      calculatedAt: raw.calculatedAt,
-      health: {
-        grade: raw.healthGrade!,
-        premiumEmployee: raw.health.employee!,
-        premiumCompany: raw.health.company!,
-        premiumTotal: raw.health.total!
-      },
-      pension: {
-        grade: raw.pensionGrade!,
-        premiumEmployee: raw.pension.employee!,
-        premiumCompany: raw.pension.company!,
-        premiumTotal: raw.pension.total!
-      },
-      care: raw.care
+      this.selectedCompany.healthType === '組合健保' && this.selectedCompany.customRates
         ? {
-            grade: raw.careGrade!,
-            premiumEmployee: raw.care.employee!,
-            premiumCompany: raw.care.company!,
-            premiumTotal: raw.care.total!
+            health: {
+              employee: parseFloat(this.selectedCompany.customRates.health?.employee ?? '0'),
+              company: parseFloat(this.selectedCompany.customRates.health?.company ?? '0'),
+            },
+            pension: prefectureRates.pension,
+            care: {
+              employee: parseFloat(this.selectedCompany.customRates.care?.employee ?? '0'),
+              company: parseFloat(this.selectedCompany.customRates.care?.company ?? '0'),
+            },
           }
-        : null
-    };
+        : prefectureRates;
   
     try {
       const uid = this.authService.getUid() ?? 'system';
@@ -932,6 +989,56 @@ export class InsurancePremiumComponent implements OnInit {
       }
   
       for (const month of months) {
+        const enriched = {
+          ...emp,
+          ...evaluateInsuranceStatus(emp, this.selectedCompany, thisMonthIncome, this.allEmployees, month)
+        };
+  
+        const raw = calculateInsurancePremiums(
+          thisMonthIncome.totalMonthlyIncome,
+          enriched,
+          this.selectedCompany,
+          rates,
+          this.salaryGradeTable,
+          this.pensionGradeTable,
+          bonusMonthlyEquivalent,
+          month
+        );
+  
+        if (!raw) {
+          console.warn(`[ERROR] 保険料計算失敗: ${emp.empNo} / ${month}`);
+          continue;
+        }
+  
+        const snapshot: InsurancePremiumSnapshot = {
+          standardMonthlyAmount: raw.standardMonthlyAmount,
+          standardMonthlyAmountBreakdown: this.sanitizeBreakdown(raw.standardMonthlyAmountBreakdown),
+          healthGrade: raw.healthGrade!,
+          pensionGrade: raw.pensionGrade!,
+          careGrade: raw.careGrade ?? null,
+          calculatedAt: raw.calculatedAt,
+          health: {
+            grade: raw.healthGrade!,
+            premiumEmployee: raw.health.employee!,
+            premiumCompany: raw.health.company!,
+            premiumTotal: raw.health.total!
+          },
+          pension: {
+            grade: raw.pensionGrade!,
+            premiumEmployee: raw.pension.employee!,
+            premiumCompany: raw.pension.company!,
+            premiumTotal: raw.pension.total!
+          },
+          care: raw.care
+            ? {
+                grade: raw.careGrade!,
+                premiumEmployee: raw.care.employee!,
+                premiumCompany: raw.care.company!,
+                premiumTotal: raw.care.total!
+              }
+            : null
+        };
+  
         await this.firestoreService.saveActualPremiumRecord(
           this.selectedCompanyId,
           emp.empNo,
@@ -949,8 +1056,8 @@ export class InsurancePremiumComponent implements OnInit {
     }
   
     await this.loadSavedPremiums();
-  }  
-
+  }
+  
   async shouldShowFixed(emp: Employee & any): Promise<boolean> {
     if (this.devForceAllButtons) return true;
     if (!this.selectedCompanyId) return false;
@@ -1014,95 +1121,99 @@ export class InsurancePremiumComponent implements OnInit {
     );
   
     const avgIncome = relevantRecords.reduce((sum, r) => sum + (r.totalMonthlyIncome ?? 0), 0) / relevantRecords.length;
-  
     const bonusMonthlyEquivalent = computeBonusMonthlyEquivalent(emp);
   
-    const enriched = {
-      ...emp,
-      ...evaluateInsuranceStatus(emp, this.selectedCompany, {
-        ...relevantRecords[relevantRecords.length - 1],
-        totalMonthlyIncome: avgIncome
-      })
-    };
-  
     const prefecture = this.selectedCompany.prefecture ?? 'default';
-
     const fallbackRates: InsuranceRates = {
       health: { employee: 0, company: 0 },
       pension: { employee: 0, company: 0 },
       care: { employee: 0, company: 0 }
     };
-    
     const prefectureRates = this.insuranceRatesTable[prefecture] ?? fallbackRates;
-    
     const rates: InsuranceRates =
-    this.selectedCompany.healthType === '組合健保' && this.selectedCompany.customRates
-      ? {
-          health: {
-            employee: parseFloat(this.selectedCompany.customRates.health?.employee ?? '0'),
-            company: parseFloat(this.selectedCompany.customRates.health?.company ?? '0'),
-          },
-          pension: prefectureRates.pension,
-          care: {
-            employee: parseFloat(this.selectedCompany.customRates.care?.employee ?? '0'),
-            company: parseFloat(this.selectedCompany.customRates.care?.company ?? '0'),
-          }
-        }
-      : prefectureRates;  
-    
-    const raw = calculateInsurancePremiums(
-      avgIncome,
-      enriched,
-      this.selectedCompany,
-      rates,
-      this.salaryGradeTable,
-      this.pensionGradeTable,
-      bonusMonthlyEquivalent
-    );    
-  
-    if (!raw) {
-      alert('保険料計算に失敗しました');
-      return;
-    }
-  
-    const snapshot: InsurancePremiumSnapshot = {
-      standardMonthlyAmount: raw.standardMonthlyAmount,
-      standardMonthlyAmountBreakdown: this.sanitizeBreakdown(raw.standardMonthlyAmountBreakdown),
-      healthGrade: raw.healthGrade!,
-      pensionGrade: raw.pensionGrade!,
-      careGrade: raw.careGrade ?? null,
-      calculatedAt: raw.calculatedAt,
-      health: {
-        grade: raw.healthGrade!,
-        premiumEmployee: raw.health.employee!,
-        premiumCompany: raw.health.company!,
-        premiumTotal: raw.health.total!
-      },
-      pension: {
-        grade: raw.pensionGrade!,
-        premiumEmployee: raw.pension.employee!,
-        premiumCompany: raw.pension.company!,
-        premiumTotal: raw.pension.total!
-      },
-      care: raw.care
+      this.selectedCompany.healthType === '組合健保' && this.selectedCompany.customRates
         ? {
-            grade: raw.careGrade!,
-            premiumEmployee: raw.care.employee!,
-            premiumCompany: raw.care.company!,
-            premiumTotal: raw.care.total!
+            health: {
+              employee: parseFloat(this.selectedCompany.customRates.health?.employee ?? '0'),
+              company: parseFloat(this.selectedCompany.customRates.health?.company ?? '0'),
+            },
+            pension: prefectureRates.pension,
+            care: {
+              employee: parseFloat(this.selectedCompany.customRates.care?.employee ?? '0'),
+              company: parseFloat(this.selectedCompany.customRates.care?.company ?? '0'),
+            }
           }
-        : null
-    };
+        : prefectureRates;
   
     try {
       const uid = this.authService.getUid() ?? 'system';
       const startYear = targetYear;
+  
       const months = Array.from({ length: 12 }).map((_, i) => {
-        const date = new Date(startYear, 8 + i);
+        const date = new Date(startYear, 8 + i); // 9月〜翌年8月
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       });
   
       for (const month of months) {
+        const enriched = {
+          ...emp,
+          ...evaluateInsuranceStatus(
+            emp,
+            this.selectedCompany,
+            {
+              ...relevantRecords[relevantRecords.length - 1],
+              totalMonthlyIncome: avgIncome
+            },
+            this.allEmployees,
+            month // 🔸 月単位で年齢/保険判定
+          )
+        };
+  
+        const raw = calculateInsurancePremiums(
+          avgIncome,
+          enriched,
+          this.selectedCompany,
+          rates,
+          this.salaryGradeTable,
+          this.pensionGradeTable,
+          bonusMonthlyEquivalent,
+          month // 🔸 月単位で制度判定
+        );
+  
+        if (!raw) {
+          console.warn(`[ERROR] 保険料計算失敗: ${emp.empNo} / ${month}`);
+          continue;
+        }
+  
+        const snapshot: InsurancePremiumSnapshot = {
+          standardMonthlyAmount: raw.standardMonthlyAmount,
+          standardMonthlyAmountBreakdown: this.sanitizeBreakdown(raw.standardMonthlyAmountBreakdown),
+          healthGrade: raw.healthGrade!,
+          pensionGrade: raw.pensionGrade!,
+          careGrade: raw.careGrade ?? null,
+          calculatedAt: raw.calculatedAt,
+          health: {
+            grade: raw.healthGrade!,
+            premiumEmployee: raw.health.employee!,
+            premiumCompany: raw.health.company!,
+            premiumTotal: raw.health.total!
+          },
+          pension: {
+            grade: raw.pensionGrade!,
+            premiumEmployee: raw.pension.employee!,
+            premiumCompany: raw.pension.company!,
+            premiumTotal: raw.pension.total!
+          },
+          care: raw.care
+            ? {
+                grade: raw.careGrade!,
+                premiumEmployee: raw.care.employee!,
+                premiumCompany: raw.care.company!,
+                premiumTotal: raw.care.total!
+              }
+            : null
+        };
+  
         await this.firestoreService.saveActualPremiumRecord(
           this.selectedCompanyId!,
           emp.empNo,
@@ -1120,10 +1231,12 @@ export class InsurancePremiumComponent implements OnInit {
     }
   
     await this.loadSavedPremiums();
-  }
+  }  
 
   async shouldShowRevised(emp: Employee & any): Promise<boolean> {
-    const tag = `[随時改定 判定] ${emp.empNo} ${emp.lastName}${emp.firstName}`;
+    const tag = `【随時改定チェック】${emp.empNo} ${emp.lastName}${emp.firstName}`;
+    console.log(`${tag} 🔍 判定開始（selectedMonth = ${this.selectedMonth}）`);
+  
     if (this.devForceAllButtons) {
       console.log(`${tag}: devForceAllButtons = true → ✅ 強制有効化`);
       return true;
@@ -1134,82 +1247,121 @@ export class InsurancePremiumComponent implements OnInit {
       return false;
     }
   
-    const [year, month] = this.selectedMonth.split('-').map(Number);
-    const targetMonths = [
-      new Date(year, month - 1),
-      new Date(year, month),
-      new Date(year, month + 1)
-    ].map(d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);    
+    const normalizeMonth = (monthStr: string): string => {
+      const [y, m] = monthStr.split('-');
+      return `${y}-${String(Number(m)).padStart(2, '0')}`;
+    };
+  
+    const [year, month1Based] = this.selectedMonth.split('-').map(Number);
+    const month = month1Based - 1;
+    const selectedDate = new Date(year, month);
+  
+    // 変動月（2か月前）
+    const changeDate = new Date(selectedDate);
+    changeDate.setMonth(changeDate.getMonth() - 2);
+    const changeYm = `${changeDate.getFullYear()}-${String(changeDate.getMonth() + 1).padStart(2, '0')}`;
+  
+    // 比較対象（変動月の前月）
+    const prevDate = new Date(changeDate);
+    prevDate.setMonth(prevDate.getMonth() - 1);
+    const prevYm = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
   
     const incomeRecords = await this.firestoreService.getIncomeRecords(this.selectedCompanyId, emp.empNo);
-    const relevant = incomeRecords.filter(r => targetMonths.includes(r.applicableMonth));
-    console.log(`${tag}: 対象月 =`, targetMonths);
-    console.log(`${tag}: incomeRecords =`, relevant);
+    console.log(`${tag}: 全incomeRecords =`, incomeRecords);
+  
+    const incomeMap = Object.fromEntries(incomeRecords.map(r => [normalizeMonth(r.applicableMonth), r]));
+  
+    const current = incomeMap[changeYm];
+    const previous = incomeMap[prevYm];
+    console.log(`${tag}: 比較：前月(${prevYm}) vs 変動月(${changeYm})`, { prev: previous, curr: current });
+  
+    if (!current || !previous) {
+      console.log(`${tag}: 変動比較データ不足 → ❌`);
+      return false;
+    }
+  
+    const currentIncome = current.totalIncome ?? current.totalMonthlyIncome ?? 0;
+    const prevIncome = previous.totalIncome ?? previous.totalMonthlyIncome ?? 0;
+  
+    if (currentIncome === prevIncome) {
+      console.log(`${tag}: 前月と変動月の収入に変化なし → ❌`);
+      return false;
+    }
+  
+    // 3ヶ月間の対象月取得
+    const targetMonths = [
+      new Date(changeDate),
+      new Date(changeDate.getFullYear(), changeDate.getMonth() + 1),
+      new Date(changeDate.getFullYear(), changeDate.getMonth() + 2)
+    ].map(d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  
+    const relevant = incomeRecords.filter(r => targetMonths.includes(normalizeMonth(r.applicableMonth)));
+    console.log(`${tag}: 絞り込み後 relevantRecords =`, relevant);
   
     if (relevant.length < 3) {
-      console.log(`${tag}: 月数不足 → ❌`);
+      console.log(`${tag}: 月数不足（${relevant.length}件） → ❌`);
       return false;
     }
   
     const allValidDays = relevant.every(r => (r.workDays ?? 0) >= 17);
-    console.log(`${tag}: 支払基礎日数 =`, relevant.map(r => ({
+    console.log(`${tag}: 支払基礎日数チェック =`, relevant.map(r => ({
       month: r.applicableMonth,
       days: r.workDays ?? 0,
       result: (r.workDays ?? 0) >= 17
-    })));    
+    })));
   
     if (!allValidDays) {
-      console.log(`${tag}: 支払基礎日数条件不成立 → ❌`);
+      console.log(`${tag}: 支払基礎日数不成立 → ❌`);
       return false;
     }
   
-    const baseSum = relevant.reduce((sum, r) => sum + (r.totalIncome ?? 0), 0);
-    const bonusMonthly = computeBonusMonthlyEquivalent(emp) ?? 0;
-    const averageMonthlyWithBonus = Math.floor((baseSum + bonusMonthly * 3) / 3);
+    const baseSum = relevant.reduce((sum, r) => sum + (r.totalIncome ?? r.totalMonthlyIncome ?? 0), 0);
+    const bonusMonthlyEquivalent = computeBonusMonthlyEquivalent(emp) ?? 0;
+    const averageMonthlyWithBonus = Math.floor((baseSum + bonusMonthlyEquivalent * 3) / 3);
+    console.log(`${tag}: 平均月収（含む賞与）= ${averageMonthlyWithBonus}`);
   
     const newGrade = getStandardSalaryGrade(averageMonthlyWithBonus, this.salaryGradeTable)?.grade;
-    console.log(`${tag}: 平均月収（賞与込）= ${averageMonthlyWithBonus}円 → 等級: ${newGrade}`);
-  
+    console.log(`${tag}: 新等級 =`, newGrade);
     if (newGrade == null) {
-      console.log(`${tag}: 新等級判定不能 → ❌`);
+      console.log(`${tag}: 等級判定不能 → ❌`);
       return false;
     }
   
     const allActuals = await this.firestoreService.getActualPremiumRecords(this.selectedCompanyId, emp.empNo);
-    const prevMonth = new Date(year, month - 2);
-    const prevYm = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
-  
-    const baseRecord = allActuals.find(a => a.applicableMonth === prevYm);
-    const oldGrade = baseRecord?.healthGrade ?? null;
-    console.log(`${tag}: 基準レコード（月: ${prevYm}）=`, baseRecord);
-    console.log(`${tag}: 比較元等級 = ${oldGrade}`);
+    const oldRecord = allActuals.find(a => normalizeMonth(a.applicableMonth) === prevYm);
+    const oldGrade = oldRecord?.healthGrade ?? null;
+    console.log(`${tag}: 比較対象 等級 = ${oldGrade}`);
   
     if (oldGrade == null) {
-      console.log(`${tag}: 比較対象（月: ${prevYm}）なし → ❌`);
+      console.log(`${tag}: 比較対象等級 不明 → ❌`);
       return false;
     }
   
     const diff = Math.abs(newGrade - oldGrade);
-    const result = diff >= 2;
-    console.log(`${tag}: 等級差 = ${diff} → ${result ? '✅ 2等級以上' : '❌ 不足'}`);
-  
-    return result;
+    const isEligible = diff >= 2;
+    console.log(`${tag}: 等級差 = ${diff} → ${isEligible ? '✅ 随時改定対象' : '❌ 差不足'}`);
+    return isEligible;
   }
 
   async registerRevised(emp: Employee): Promise<void> {
     if (!this.selectedCompanyId || !this.selectedMonth || !this.selectedCompany) return;
   
     const uid = this.authService.getUid() ?? 'system';
+    const [year, month1Based] = this.selectedMonth.split('-').map(Number);
+    const month = month1Based - 1;
   
-    const [year, month] = this.selectedMonth.split('-').map(Number);
     const targetMonths = [
+      new Date(year, month - 2),
       new Date(year, month - 1),
-      new Date(year, month),
-      new Date(year, month + 1)
-    ].map(d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      new Date(year, month)
+    ].map(d => `${d.getFullYear()}-${d.getMonth() + 1}`);
   
     const incomeRecords = await this.firestoreService.getIncomeRecords(this.selectedCompanyId, emp.empNo);
-    const relevantRecords = incomeRecords.filter(r => targetMonths.includes(r.applicableMonth));
+  
+    const relevantRecords = incomeRecords.filter(r => {
+      const normalized = r.applicableMonth?.replace(/-0?(\d+)$/, (_: string, m: string) => `-${parseInt(m, 10)}`);
+      return targetMonths.includes(normalized);
+    });
   
     if (relevantRecords.length < 3) {
       alert('3か月分の報酬記録が揃っていません');
@@ -1220,82 +1372,32 @@ export class InsurancePremiumComponent implements OnInit {
     const totalIncome = relevantRecords.reduce((sum, r) => sum + (r.totalMonthlyIncome ?? 0), 0);
     const averageMonthlyWithBonus = Math.floor((totalIncome + bonusMonthlyEquivalent * 3) / 3);
   
-    const enriched = {
-      ...emp,
-      ...evaluateInsuranceStatus(emp, this.selectedCompany, { totalMonthlyIncome: averageMonthlyWithBonus })
-    };
-  
     const prefecture = this.selectedCompany.prefecture ?? 'default';
     const fallbackRates: InsuranceRates = {
       health: { employee: 0, company: 0 },
       pension: { employee: 0, company: 0 },
       care: { employee: 0, company: 0 }
     };
-    
+  
     const prefectureRates = this.insuranceRatesTable[prefecture] ?? fallbackRates;
-    
     const rates: InsuranceRates =
-    this.selectedCompany.healthType === '組合健保' && this.selectedCompany.customRates
-      ? {
-          health: {
-            employee: parseFloat(this.selectedCompany.customRates.health?.employee?.toString() ?? '0'),
-            company: parseFloat(this.selectedCompany.customRates.health?.company?.toString() ?? '0')
-          },
-          pension: prefectureRates.pension,
-          care: {
-            employee: parseFloat(this.selectedCompany.customRates.care?.employee?.toString() ?? '0'),
-            company: parseFloat(this.selectedCompany.customRates.care?.company?.toString() ?? '0')
-          }
-        }
-      : prefectureRates;
-  
-  
-    const raw = calculateInsurancePremiums(
-      averageMonthlyWithBonus,
-      enriched,
-      this.selectedCompany,
-      rates,
-      this.salaryGradeTable,
-      this.pensionGradeTable,
-      bonusMonthlyEquivalent
-    );
-  
-    if (!raw) {
-      alert('保険料の再算出に失敗しました');
-      return;
-    }
-  
-    const snapshot: InsurancePremiumSnapshot = {
-      standardMonthlyAmount: raw.standardMonthlyAmount,
-      standardMonthlyAmountBreakdown: this.sanitizeBreakdown(raw.standardMonthlyAmountBreakdown),
-      healthGrade: raw.healthGrade!,
-      pensionGrade: raw.pensionGrade!,
-      careGrade: raw.careGrade ?? null,
-      calculatedAt: raw.calculatedAt,
-      health: {
-        grade: raw.healthGrade!,
-        premiumEmployee: raw.health.employee!,
-        premiumCompany: raw.health.company!,
-        premiumTotal: raw.health.total!
-      },
-      pension: {
-        grade: raw.pensionGrade!,
-        premiumEmployee: raw.pension.employee!,
-        premiumCompany: raw.pension.company!,
-        premiumTotal: raw.pension.total!
-      },
-      care: raw.care
+      this.selectedCompany.healthType === '組合健保' && this.selectedCompany.customRates
         ? {
-            grade: raw.careGrade!,
-            premiumEmployee: raw.care.employee!,
-            premiumCompany: raw.care.company!,
-            premiumTotal: raw.care.total!
+            health: {
+              employee: parseFloat(this.selectedCompany.customRates.health?.employee?.toString() ?? '0'),
+              company: parseFloat(this.selectedCompany.customRates.health?.company?.toString() ?? '0')
+            },
+            pension: prefectureRates.pension,
+            care: {
+              employee: parseFloat(this.selectedCompany.customRates.care?.employee?.toString() ?? '0'),
+              company: parseFloat(this.selectedCompany.customRates.care?.company?.toString() ?? '0')
+            }
           }
-        : null
-    };
+        : prefectureRates;
   
-    // ④ 12月〜翌年8月まで保存
-    const startDate = new Date(year, month - 1 + 3);
+    // ④ 適用月：4か月目から8月まで
+    const revisedBase = new Date(year, month - 2);
+    const startDate = new Date(revisedBase.getFullYear(), revisedBase.getMonth() + 3);   
     const endYear = startDate.getMonth() >= 9 ? startDate.getFullYear() + 1 : startDate.getFullYear();
     const endDate = new Date(endYear, 7);
   
@@ -1308,6 +1410,62 @@ export class InsurancePremiumComponent implements OnInit {
     }
   
     for (const targetMonth of datesToSave) {
+      const enriched = {
+        ...emp,
+        ...evaluateInsuranceStatus(
+          emp,
+          this.selectedCompany,
+          { totalMonthlyIncome: averageMonthlyWithBonus },
+          this.allEmployees,
+          targetMonth
+        )
+      };
+  
+      const raw = calculateInsurancePremiums(
+        averageMonthlyWithBonus,
+        enriched,
+        this.selectedCompany,
+        rates,
+        this.salaryGradeTable,
+        this.pensionGradeTable,
+        bonusMonthlyEquivalent,
+        targetMonth
+      );
+  
+      if (!raw) {
+        console.warn(`[ERROR] 保険料計算失敗: ${emp.empNo} / ${targetMonth}`);
+        continue;
+      }
+  
+      const snapshot: InsurancePremiumSnapshot = {
+        standardMonthlyAmount: raw.standardMonthlyAmount,
+        standardMonthlyAmountBreakdown: this.sanitizeBreakdown(raw.standardMonthlyAmountBreakdown),
+        healthGrade: raw.healthGrade!,
+        pensionGrade: raw.pensionGrade!,
+        careGrade: raw.careGrade ?? null,
+        calculatedAt: raw.calculatedAt,
+        health: {
+          grade: raw.healthGrade!,
+          premiumEmployee: raw.health.employee!,
+          premiumCompany: raw.health.company!,
+          premiumTotal: raw.health.total!
+        },
+        pension: {
+          grade: raw.pensionGrade!,
+          premiumEmployee: raw.pension.employee!,
+          premiumCompany: raw.pension.company!,
+          premiumTotal: raw.pension.total!
+        },
+        care: raw.care
+          ? {
+              grade: raw.careGrade!,
+              premiumEmployee: raw.care.employee!,
+              premiumCompany: raw.care.company!,
+              premiumTotal: raw.care.total!
+            }
+          : null
+      };
+  
       await this.firestoreService.saveActualPremiumRecord(
         this.selectedCompanyId,
         emp.empNo,
@@ -1320,8 +1478,7 @@ export class InsurancePremiumComponent implements OnInit {
   
     alert(`随時改定として ${datesToSave.length}か月分（${datesToSave[0]} ～ ${datesToSave[datesToSave.length - 1]}）を登録しました`);
     await this.loadSavedPremiums();
-  }
-  
+  }  
 
 shouldShowLoss(emp: Employee & any): boolean {
 
@@ -1347,7 +1504,7 @@ async registerLoss(emp: Employee): Promise<void> {
 
   const enriched = {
     ...emp,
-    ...evaluateInsuranceStatus(emp, this.selectedCompany, thisMonthIncome)
+    ...evaluateInsuranceStatus(emp, this.selectedCompany, thisMonthIncome, this.allEmployees, this.selectedMonth)
   };
 
   const prefecture = this.selectedCompany.prefecture ?? 'default';
@@ -1476,11 +1633,12 @@ private sanitizeBreakdown(breakdown: any): {
 async calculateAllBonusPremiums(): Promise<void> {
   if (!this.selectedCompanyId || !this.selectedMonth || !this.selectedCompany) return;
 
+  let savedCount = 0; // 保存件数カウント
+
   const promises = this.allEmployees.map(async emp => {
-    // 💡 evaluateInsuranceStatusを適用
     const evaluatedEmp = {
       ...emp,
-      ...evaluateInsuranceStatus(emp, this.selectedCompany!)
+      ...evaluateInsuranceStatus(emp, this.selectedCompany!, undefined, this.allEmployees, this.selectedMonth)
     };
 
     console.log(`🔍 ${emp.lastName} ${emp.firstName} bonusRecords:`, emp.bonusRecords);
@@ -1502,12 +1660,20 @@ async calculateAllBonusPremiums(): Promise<void> {
           bonus.applicableMonth,
           bonus
         );
+        savedCount++;
       }
     }
   });
 
   await Promise.all(promises);
   await this.loadBonusPremiums();
+
+  const msg =
+    savedCount > 0
+      ? `賞与保険料（${this.selectedMonth}）を ${savedCount}件 保存しました`
+      : `賞与保険料（${this.selectedMonth}）に該当するデータはありません`;
+
+  alert(msg);
   console.log('✅ 賞与保険料の再計算＆保存 完了');
 }
 
@@ -1647,7 +1813,227 @@ private convertToReportFormat(employees: ExtendedEmployee[]): InsuranceReportRec
     });
 }
 
+async applyExemptionForSelectedMonth(): Promise<void> {
+  if (!this.selectedCompany || !this.selectedMonth || !this.displayEmployees?.length) return;
 
+  const company = this.selectedCompany;
+  const rates = this.getRatesForCompany(company, this.insuranceRatesTable);
+  const uid = this.authService.getUid() ?? 'system';
+
+  let savedCount = 0;
+
+  const tasks = this.displayEmployees.map(async emp => {
+    const tag = `[免除処理] ${emp.empNo} ${emp.lastName}${emp.firstName}`;
+    console.log(`${tag} 初期状態`, {
+      hasExemption: emp.hasExemption,
+      exemptionDetails: emp.exemptionDetails,
+    });
+
+    if (!emp.hasExemption || !emp.exemptionDetails) {
+      console.log(`${tag} → ❌ hasExemption=false or exemptionDetails=null → スキップ`);
+      return;
+    }
+
+    const details = emp.exemptionDetails;
+    const start = details.startMonth ?? '';
+    const end = details.endMonth ?? '';
+    const inRange =
+      (!start || start <= this.selectedMonth) &&
+      (!end || this.selectedMonth <= end);
+
+    if (!inRange) {
+      console.log(`${tag} → ❌ ${this.selectedMonth} は免除期間外（${start} ～ ${end}） → スキップ`);
+      return;
+    }
+
+    const salary = emp.standardMonthlyAmount ?? 0;
+    if (!salary || salary <= 0) {
+      console.log(`${tag} → ❌ 標準報酬月額が不正（${salary}）→ スキップ`);
+      return;
+    }
+
+    const targetInsurances = Array.isArray(details.targetInsurances)
+      ? details.targetInsurances
+      : Object.values(details.targetInsurances ?? {});
+
+    const premiums = calculateInsurancePremiums(
+      salary,
+      emp,
+      company,
+      rates,
+      this.salaryGradeTable,
+      this.pensionGradeTable,
+      undefined,
+      this.selectedMonth,
+      false,
+      targetInsurances
+    );
+
+    if (!premiums) {
+      console.log(`${tag} → ❌ calculateInsurancePremiums() が null → スキップ`);
+      return;
+    }
+
+    const safeValue = (v: number | null | undefined): number => (typeof v === 'number' ? v : 0);
+
+    const snapshot: InsurancePremiumSnapshot = {
+      standardMonthlyAmount: safeValue(premiums.standardMonthlyAmount),
+      standardMonthlyAmountBreakdown: premiums.standardMonthlyAmountBreakdown,
+      healthGrade: safeValue(premiums.healthGrade),
+      pensionGrade: safeValue(premiums.pensionGrade),
+      careGrade: safeValue(premiums.careGrade),
+      calculatedAt: premiums.calculatedAt,
+      health: {
+        grade: safeValue(premiums.healthGrade),
+        premiumEmployee: safeValue(premiums.health?.employee),
+        premiumCompany: safeValue(premiums.health?.company),
+        premiumTotal: safeValue(premiums.health?.total),
+      },
+      pension: {
+        grade: safeValue(premiums.pensionGrade),
+        premiumEmployee: safeValue(premiums.pension?.employee),
+        premiumCompany: safeValue(premiums.pension?.company),
+        premiumTotal: safeValue(premiums.pension?.total),
+      },
+      care: {
+        grade: safeValue(premiums.careGrade),
+        premiumEmployee: safeValue(premiums.care?.employee),
+        premiumCompany: safeValue(premiums.care?.company),
+        premiumTotal: safeValue(premiums.care?.total),
+      },
+    };
+
+    try {
+      await this.firestoreService.saveActualPremiumRecord(
+        company.companyId,
+        emp.empNo,
+        this.selectedMonth,
+        'exemption',
+        snapshot,
+        uid
+      );
+      savedCount++;
+      console.log(`${tag} → ✅ Firestore 保存成功`);
+    } catch (error) {
+      console.error(`${tag} → ❌ Firestore 保存失敗`, error);
+    }
+  });
+
+  await Promise.all(tasks);
+  await this.loadSavedPremiums();
+
+  const msg =
+    savedCount > 0
+      ? `免除適用を ${savedCount}人分（${this.selectedMonth}）保存しました`
+      : `この月に該当する免除対象者はいません`;
+
+  this.snackBar.open(msg, '閉じる', { duration: 4000 });
+}
+
+isExemptionButtonEnabled(): boolean {
+  if (!this.selectedMonth || !this.displayEmployees?.length) return false;
+
+  const rates = this.getRatesForCompany(this.selectedCompany!, this.insuranceRatesTable);
+
+  return this.checkExemptionApplyEligibility(
+    this.selectedCompany!,
+    rates,
+    this.salaryGradeTable,
+    this.pensionGradeTable,
+    this.selectedMonth,
+    this.displayEmployees
+  );
+}
+
+checkExemptionApplyEligibility(
+  company: Company,
+  rates: InsuranceRates,
+  healthGrades: SalaryGrade[],
+  pensionGrades: SalaryGrade[],
+  selectedMonth: string,
+  employees: any[]
+): boolean {
+  return employees.some(emp => {
+    if (!emp.hasExemption || !emp.exemptionDetails) return false;
+
+    const details = emp.exemptionDetails;
+    const start = details.startMonth ?? '';
+    const end = details.endMonth ?? '';
+    const inRange =
+      (!start || start <= selectedMonth) &&
+      (!end || selectedMonth <= end);
+
+    const health = emp.healthInsuranceAmount ?? 0;
+    const pension = emp.pensionInsuranceAmount ?? 0;
+    const care = emp.careInsuranceAmount ?? 0;
+
+    if (
+      (details.targetInsurances.includes('health') && health !== 0) ||
+      (details.targetInsurances.includes('pension') && pension !== 0) ||
+      (details.targetInsurances.includes('care') && care !== 0)
+    ) {
+      return true;
+    }
+
+    return false;
+  });
+}
+
+getRatesForCompany(company: Company, table: Record<string, InsuranceRates>): InsuranceRates {
+  const fallback: InsuranceRates = {
+    health: { employee: 0, company: 0 },
+    pension: { employee: 0, company: 0 },
+    care: { employee: 0, company: 0 },
+  };
+
+  const defaultRates = company.prefecture ? table[company.prefecture] : fallback;
+
+  return company.healthType === '組合健保' && company.customRates
+    ? {
+        health: {
+          employee: parseFloat(company.customRates.health?.employee ?? '0'),
+          company: parseFloat(company.customRates.health?.company ?? '0'),
+        },
+        pension: defaultRates.pension,
+        care: {
+          employee: parseFloat(company.customRates.care?.employee ?? '0'),
+          company: parseFloat(company.customRates.care?.company ?? '0'),
+        },
+      }
+    : defaultRates;
+}
+
+canRegisterQualificationForAll(): boolean {
+  if (this.devForceAllButtons) return true;
+
+  if (!this.selectedMonth || !this.displayEmployees?.length) return false;
+
+  return this.displayEmployees.some(emp => emp.canRegisterQualification);
+}
+
+canRegisterQualificationForAnyEmployee(): boolean {
+  if (this.devForceAllButtons) return true;
+  if (!this.selectedMonth || !this.displayEmployees?.length) return false;
+
+  return this.displayEmployees.some(emp => emp.canRegisterQualification);
+}
+
+get canRegisterFixedForAnyEmployee(): boolean {
+  return this.displayEmployees?.some(emp => emp.canRegisterFixed);
+}
+
+get canRegisterRevisedForAnyEmployee(): boolean {
+  return this.displayEmployees?.some(emp => emp.canRegisterRevised);
+}
+
+get canCalculateBonusPremiumForSelectedMonth(): boolean {
+  if (this.devForceAllButtons) return true;
+  if (!this.selectedMonth || !this.displayEmployees?.length) return false;
+
+  return this.displayEmployees.some(emp =>
+    (emp.bonusRecords ?? []).some((b: BonusRecord) => b.applicableMonth === this.selectedMonth)
+  );
+}
 
 }
 

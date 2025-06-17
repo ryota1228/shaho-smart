@@ -95,7 +95,7 @@ export class FirestoreService {
     const ref = doc(this.firestore, 'companies', companyId);
     return updateDoc(ref, { isDeleted: true });
   }
-  
+
   getEmployeesForCompany(companyId: string): Observable<Employee[]> {
     const col = collection(this.firestore, `companies/${companyId}/employees`);
     const q = query(col, where('isDeleted', '==', false));
@@ -134,7 +134,16 @@ export class FirestoreService {
             bonusRecords: [],
             firebaseUid: data['firebaseUid'],
             excludedBySocialAgreement: data['excludedBySocialAgreement'] ?? false,
-            isDependentInsured: data['isDependentInsured'] ?? false
+            isDependentInsured: data['isDependentInsured'] ?? false,
+  
+            hasExemption: data['hasExemption'] ?? false,
+            exemptionDetails: {
+              types: data['exemptionDetails']?.types ?? [],
+              targetInsurances: data['exemptionDetails']?.targetInsurances ?? [],
+              startMonth: data['exemptionDetails']?.startMonth ?? '',
+              endMonth: data['exemptionDetails']?.endMonth ?? '',
+              notes: data['exemptionDetails']?.notes ?? ''
+            }
           };
   
           const bonusCol = collection(this.firestore, `companies/${companyId}/employees/${emp.empNo}/bonusRecords`);
@@ -151,7 +160,7 @@ export class FirestoreService {
       }),
       switchMap((employees: Employee[]) => of(employees))
     );
-  }  
+  }
 
   async saveCompanyWithEmployees(companyId: string | null, company: any, employees: any[]): Promise<string> {
     const companiesCol = collection(this.firestore, 'companies');
@@ -602,9 +611,10 @@ export class FirestoreService {
   ): Promise<void> {
     const docRef = doc(this.firestore, `companies/${companyId}/employees/${empNo}/actualPremiums/${month}`);
     const existingSnap = await getDoc(docRef);
+    const isOverwriteAllowed = method === 'revised' || method === 'exemption';
   
-    if (existingSnap.exists() && method !== 'revised') {
-      console.warn('⚠ actualPremiums はすでに存在しています。上書きは行いません。');
+    if (existingSnap.exists() && !isOverwriteAllowed) {
+      console.warn(`⚠ actualPremiums はすでに存在しています（method: ${method}）。上書きは行いません。`);
       return;
     }
   
@@ -830,7 +840,27 @@ export class FirestoreService {
     for (const i of insurancePremiums) {
       await this.saveInsurancePremium(companyId, newEmpNo, i.applicableMonth, { ...i, empNo: newEmpNo });
     }
-  }  
+  }
+
+  async getUserRoleForCompany(uid: string, companyId: string): Promise<'hr' | 'employee' | null> {
+    const docRef = doc(this.firestore, `users/${uid}/userCompanies/${companyId}`);
+    const snapshot = await getDoc(docRef);
+  
+    if (snapshot.exists()) {
+      return snapshot.data()['role'] ?? null;
+    }
+    return null;
+  }
+
+  async getCompaniesForUser(uid: string): Promise<{ companyId: string, role: 'employee' | 'hr' }[]> {
+    const userCompaniesRef = collection(this.firestore, `users/${uid}/userCompanies`);
+    const snapshots = await getDocs(userCompaniesRef);
+    return snapshots.docs.map(doc => ({
+      companyId: doc.id,
+      role: doc.data()['role'] as 'employee' | 'hr',
+    }));
+  }
+  
 }
 
 function toActualEntry(source: PremiumDetail): ActualPremiumEntry {

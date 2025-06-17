@@ -176,17 +176,17 @@
     </app-dependent-edit-dialog>
     </mat-tab>
 
-    <mat-tab label="減免情報">
+    <mat-tab label="免除情報">
       <div class="form-section">
     
         <mat-checkbox [(ngModel)]="employee.hasExemption" name="hasExemption">
-          制度上の理由により減免対象となっている
+          制度上の理由により免除対象となっている
         </mat-checkbox>
     
         <div *ngIf="employee.hasExemption" class="form-group">
     
           <mat-form-field class="form-field" appearance="fill">
-            <mat-label>減免理由（複数選択可）</mat-label>
+            <mat-label>免除理由（複数選択可）</mat-label>
             <mat-select multiple [(ngModel)]="employee.exemptionDetails.types" name="exemptionTypes">
               <mat-option value="育児休業">育児休業</mat-option>
               <mat-option value="産前産後">産前産後</mat-option>
@@ -208,12 +208,12 @@
     
           <div class="form-row">
             <mat-form-field class="form-field">
-              <mat-label>減免開始月</mat-label>
+              <mat-label>免除開始月</mat-label>
               <input matInput [(ngModel)]="employee.exemptionDetails.startMonth" name="exemptionStartMonth" placeholder="2025-01">
             </mat-form-field>
     
             <mat-form-field class="form-field">
-              <mat-label>減免終了月</mat-label>
+              <mat-label>免除終了月</mat-label>
               <input matInput [(ngModel)]="employee.exemptionDetails.endMonth" name="exemptionEndMonth" placeholder="2025-06">
             </mat-form-field>
           </div>

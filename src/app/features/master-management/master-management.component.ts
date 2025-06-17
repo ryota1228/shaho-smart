@@ -155,12 +155,7 @@ export class MasterManagementComponent implements OnInit {
       const enriched = employees.map(emp => {
         const latestIncome = latestMap[emp.empNo];
   
-        const evaluated = evaluateInsuranceStatus(
-          emp,
-          this.companyInfo!,
-          latestIncome,
-          employees
-        );
+        const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome, employees, latestIncome?.applicableMonth);
   
         const includedTotal: number =
           emp.bonusSummary?.bonusDetails
@@ -321,12 +316,8 @@ export class MasterManagementComponent implements OnInit {
       const enriched = employees.map(emp => {
         const latestIncome = latestMap[emp.empNo];
   
-        const evaluated = evaluateInsuranceStatus(
-          emp,
-          company,
-          latestIncome,
-          employees
-        );
+        const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome, employees, latestIncome?.applicableMonth);
+
   
         const includedTotal: number =
           emp.bonusSummary?.bonusDetails
@@ -398,12 +389,8 @@ export class MasterManagementComponent implements OnInit {
       const enriched = employees.map(emp => {
         const latestIncome = latestMap[emp.empNo];
   
-        const evaluated = evaluateInsuranceStatus(
-          emp,
-          this.companyInfo!,
-          latestIncome,
-          employees
-        );
+        const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome, employees, latestIncome?.applicableMonth);
+
   
         const includedTotal: number =
           emp.bonusSummary?.bonusDetails
@@ -549,10 +536,21 @@ export class MasterManagementComponent implements OnInit {
           residencyStatus: base.residencyStatus?.trim() ?? '',
           bonusMergedIntoMonthly: base.bonusMergedIntoMonthly ?? false,
           bonusSummary: bonusSummary ?? undefined,
-          firebaseUid: undefined,
+          firebaseUid: base.firebaseUid ?? (isEdit ? employee?.firebaseUid ?? null : undefined),
           isDeleted: false,
           excludedBySocialAgreement: base.excludedBySocialAgreement ?? false,
-          isDependentInsured: base.isDependentInsured ?? false
+          isDependentInsured: base.isDependentInsured ?? false,
+          hasExemption: base.hasExemption ?? false,
+          healthInsuranceStatus: base.healthInsuranceStatus ?? '加入',
+          pensionStatus: base.pensionStatus ?? '加入',
+          careInsuranceStatus: base.careInsuranceStatus ?? '加入（対象）',
+          exemptionDetails: base.exemptionDetails ?? {
+            types: [],
+            targetInsurances: [],
+            startMonth: '',
+            endMonth: '',
+            notes: ''
+          }
         };
 
         console.log('[DEBUG] 保存直前 cleaned:', cleaned);
@@ -805,7 +803,8 @@ export class MasterManagementComponent implements OnInit {
         const latestMap = await this.firestoreService.getLatestIncomeRecordsMap(this.selectedCompanyId!);
         const updatedEmployees = (employeeList ?? []).map(emp => {
           const latestIncome = latestMap[emp.empNo];
-          const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome);
+          const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome, employeeList, latestIncome?.applicableMonth);
+
         
           const useCustom = this.companyInfo!.healthType === '組合健保';
           const custom = this.companyInfo!.customRates;
@@ -916,7 +915,7 @@ export class MasterManagementComponent implements OnInit {
 
       const updatedEmployees: Employee[] = employees.map(emp => {
         const latestIncome = latestMap[emp.empNo];
-        const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome, employees);
+        const evaluated = evaluateInsuranceStatus(emp, this.companyInfo!, latestIncome, employees, latestIncome?.applicableMonth);
   
         const includedTotal: number =
         emp.bonusSummary?.bonusDetails

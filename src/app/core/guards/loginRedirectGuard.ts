@@ -1,9 +1,9 @@
-import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { filter, map } from 'rxjs/operators';
 
-export const authGuard: CanActivateFn = () => {
+export const loginRedirectGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
@@ -11,16 +11,11 @@ export const authGuard: CanActivateFn = () => {
     filter(isReady => isReady),
     map(() => {
       const uid = authService.getUid();
-      console.log('[authGuard] getUid():', uid);
-
       if (uid) {
-        console.log('[authGuard] ✅ Authenticated → access granted');
-        return true;
-      } else {
-        console.warn('[authGuard] ❌ Not logged in → redirecting to /login');
-        router.navigate(['/login']);
+        router.navigate(['/insurance-premium']);
         return false;
       }
+      return true;
     })
   );
 };
